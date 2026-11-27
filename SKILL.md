@@ -29,7 +29,7 @@ skill is the single home for all of them.
   - **DG**: ENTER and MF give the same UN numbers (and the same CLASS when both sides give one; CLASS only = same
     CLASS) → white, no warning, not counted; cell shows the value. One side only / different = red as before.
     MF / ENTER `CL9` is read as CLASS 9 (`find_dg`).
-  - **REEFER**: same TEMP on both sides → white, cell `0°C  (VENT 15CBM/H)`; but **MF text has no `VENT`** → red
+  - **REEFER**: same TEMP on both sides → white, cell `-` (was `0°C  (VENT 15CBM/H)` until the later update); but **MF text has no `VENT`** → red
     `… (MF ไม่มี VENT)`. One side only / different TEMP = red as before.
   - **TRANSIT/TRANSHIPMENT**: both sides give the same transit and MF ประเทศปลายทาง is correct and CARGO MOVEMENT
     is not wrong → `-` (note keeps `TRANSIT ตรงกันและถูกต้องตามกฎ (…)`); otherwise red as before.
@@ -43,7 +43,7 @@ skill is the single home for all of them.
     that is not checked; only DG at LAEM CHABANG shows the MF SHED (red if ≠ 2826). Regression by column name: only
     SHED cells changed in job-01…07.
   - **Update 2: "ถ้ามันถูกต้องและตรงให้ใส่ - ถ้ามันไม่ตรงก็แจ้งเตือน"** — DG SHED 2826 correct → `-`; DG that matches
-    (CLASS/UN complete) → `-`; wrong/missing → red with the values. REEFER that matches still shows `0°C  (VENT …)`.
+    (CLASS/UN complete) → `-`; wrong/missing → red with the values. REEFER that matches (TEMP same + MF has VENT) also shows `-` ("REEFER ที่ตรงกันให้ใส่ - ด้วย").
   - (Before the update) the column was **SHED (MANIFEST)** and always showed the MF value. When MF port of discharge is LAEM CHABANG
     and MF has DG (CLASS or UN), SHED ≠ 2826 → red `… (ต้องเป็น 2826 — DG LAEM CHABANG)`; every other B/L is not
     checked (white). TOTAL cell `SHED DG ไม่ตรง n B/L`.

@@ -2803,7 +2803,7 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
         if reefer_ok and MF_ORDER:
             if _vent:
                 mk(21, True)
-                reefer = f"{re_m}  (VENT {_vent.group(1).strip() or 'ระบุ'})"
+                reefer = '-'      # ผู้ใช้ 2026-11-27: TEMP ตรงกันและ MF มี VENT = '-'
             else:
                 cs[21] = 'diff'
                 TOT['reefer'] += 1
