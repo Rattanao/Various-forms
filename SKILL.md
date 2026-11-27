@@ -72,6 +72,15 @@ skill is the single home for all of them.
   data and is checked in full** (user confirmed 2026-11-27 with `HASLC…797_ตามหน้า BL .pdf` / `_CY.pdf`: MEAS. 55
   vs MF 0.000 stays red). A short FreeText ending in `CY` / `CY/CY` / `FCL` / `LCL` (≤ 30 characters) is the
   customer's STATUS (regression: 8 STATUS cells in job-02 / job-06 went from "(ไม่ระบุใน ENTER)" to CY, all = MF).
+  **Boxed MARKS/DESC = what the customer declared (2026-11-27, SWDN 1002618 "ENTER มีตีกรอบ คือสิ่งที่ลูกค้า ENTER
+  ไม่ตรงกับ M/F ขึ้นเตือนด้วย"):** the MF must **equal** the boxed text (before: it was enough that the MF contained
+  it). Not counted on either side: TEMP / VENT / HS CODE, DG tokens (`_DG_TOK`: UN NO: 2265, CLASS:8+6.1, CL9,
+  9/3082 — checked in DG), the MF package prefix `(15 METAL BOXES)`, the transit sentence (`_TR_TOK`, checked in
+  TRANSIT). Boxes over **part of a line** are read word by word (`parse_blform(words=page.get_text('words'))`, word
+  centre inside a red box that overlaps a MARKS/DESC line) — p.9 boxes half of one line + the next line.
+  Regression: 8 B/Ls in job-01…07 now warn DESC, each a real difference (MF lists more products / text than the
+  box: a second product, a grade / model suffix, quantity and packing lines);
+  other changes are notes only (newly found partial boxes that match).
   **MEAS. outside the box (2026-11-27, SWDN 1002364 "enter ไม่ได้ตีกรอบ แต่ M/F เป็น 60.000 MTQ มันผิดต้องแจ้งเตือน"):**
   the customer did not declare MEAS., so the MF must be **0.000** — ENTER MEAS. is set to 0 and compared: MF 0.000 =
   `-`, MF 60.000 = red; note `MEAS. ไม่อยู่ในกรอบแดงของลูกค้า = ไม่ได้แจ้ง → MF ต้องเป็น 0.000 (ENTER พิมพ์ 60.000)`.

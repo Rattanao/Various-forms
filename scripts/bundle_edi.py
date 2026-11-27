@@ -342,7 +342,7 @@ def red_boxes(pg):
     return out
 
 
-def parse_blform(lines, annots, page, gap_cut=False, boxes=None):
+def parse_blform(lines, annots, page, gap_cut=False, boxes=None, words=None):
     """gap_cut (OCR ของสแกน): ตัดพื้นที่สินค้าที่ช่องว่างแนวตั้ง > 70pt — ใต้นั้นคือโน้ตลายมือ/ตรายางของลูกค้า
        boxes: กรอบสีแดงของลูกค้า — MARKS/DESC ตรวจเฉพาะข้อความในกรอบ"""
     bl_line = next((l for l in lines if BL_TXT_RE.fullmatch(nospace(l['t'])) and l['x'] > 330 and l['y'] < 130), None)
@@ -457,6 +457,22 @@ def parse_blform(lines, annots, page, gap_cut=False, boxes=None):
                 bd.append(t)
     rec['marks'] = ' '.join(marks)
     rec['desc'] = ' '.join(desc)
+    # SWDN 2026-11-27 หน้า 9: ลูกค้าตีกรอบ "บางส่วนของบรรทัด" ('DL-METHIONINE 99%' + 'FEED GRADE') — บรรทัดแรกไม่อยู่ใน
+    # กรอบทั้งบรรทัด จึงอ่านทีละคำ: คำที่จุดกลางอยู่ในกรอบแดงซึ่งทับบรรทัด DESC / MARKS
+    if words and boxes:
+        def _w_in(lo, hi, lns):
+            bxs = [b for b in boxes if any(b.y0 - 2 <= l['y'] + 4 <= b.y1 + 2 and b.x0 < l['x1'] and l['x'] < b.x1
+                                           for l in lns)]
+            out = [w for w in words if lo <= (w[0] + w[2]) / 2 < hi and y_sl + 3 < (w[1] + w[3]) / 2 < y_t
+                   and any(b.x0 - 1 <= (w[0] + w[2]) / 2 <= b.x1 + 1 and b.y0 - 1 <= (w[1] + w[3]) / 2 <= b.y1 + 1
+                           for b in bxs)]
+            return [w[4] for w in sorted(out, key=lambda w: (round(w[1] / 3), w[0]))]
+        dl = [l for l in cargo if x_sl - 10 <= l['x'] < x_gw and l['t'] in desc]
+        ml = [l for l in cargo if l['x'] < x_sl - 10 and l['t'] in marks]
+        if not bd and dl:
+            bd = _w_in(x_sl - 10, x_gw, dl)
+        if not bm and ml:
+            bm = _w_in(0, x_sl - 10, ml)
     # กฎผู้ใช้ (2026-11-25): ลูกค้าตีกรอบสีแดงที่ MARKS/DESC = ตรวจเฉพาะข้อความในกรอบ (SAWASDEE MIMOSA 2611S หน้า 138)
     if bd:
         rec['desc_boxed'], rec['desc_boxed_full'] = ' '.join(bd), rec['desc']
@@ -1460,7 +1476,9 @@ def parse_enter_bundle(path, bl_re, man_bls=()):
         if kind != 'TABLE':
             table_doc = None
         if kind == 'BLFORM':
-            recs = parse_blform(ls, an, p, boxes=red_boxes(doc[p - 1]))
+            _pg = doc[p - 1]
+            recs = parse_blform(ls, an, p, boxes=red_boxes(_pg),
+                                words=_pg.get_text('words') if page_rot(_pg) not in ((0, -1), (0, 1)) else None)
             if p in garbled:
                 for r in recs.values():
                     r['ocr'] = True               # ค่าจากชั้นข้อความ OCR ของสแกน — ขึ้นสีส้ม ตรวจด้วยตา
@@ -2025,6 +2043,13 @@ def _subseq_extra(m_txt, e_txt):
     return ' '.join(extra)
 
 
+# ข้อความ DG ใน DESC (ตรวจในช่อง DG แล้ว) — 'UN 3077' 'UN NO: 2265' 'UN NO.: 2922' 'CLASS: 3' 'CLASS:8+6.1' 'CL9' '9/3082'
+_DG_TOK = (r"\bUN\s*(?:NO\.?)?\s*[-:.]?\s*\d{4}\b|\bCLASS\s*:?\s*\d(?:\.\d)?(?:\s*\+\s*\d(?:\.\d)?)*"
+           r"|\bCL\.?\s?\d(?:\.\d)?\b|\b\d(?:\.\d)?\s*/\s*\d{4}\b")
+# ประโยค transit ท้าย DESC ('IN TRANSIT SHIPMENT FROM … TO MYANMAR …') — ตรวจในช่อง TRANSIT แล้ว
+_TR_TOK = r"\b(?:IN\s*-?\s*TRANSIT|TRANS-?S?HIPMENT)\b.*$"
+
+
 def apply_bundle_rules(MAN, ENT):
     for bl, m in MAN.items():
         # MANIFEST 'TEMP : - 18'C' (มีช่องว่างหลังเครื่องหมายลบ) — find_temp ของ skill อ่านไม่ออก
@@ -2092,7 +2117,16 @@ def apply_bundle_rules(MAN, ENT):
                 continue
             e[k + '_full'] = full
             e[k + '_inbox'] = bx
-            e[k] = m[k] if _an(bx) and _an(bx) in _an(m.get(k)) else bx
+            # ผู้ใช้ 2026-11-27 (SWDN 1002618): ข้อความในกรอบ = สิ่งที่ลูกค้า ENTER → MF ต้องเท่ากับข้อความในกรอบ
+            # (เดิม: แค่ MF มีข้อความในกรอบก็ถือว่าตรง) ; ไม่นับ TEMP / VENT / HS CODE ที่ MF ต่อท้ายไว้
+            # (ไม่นับ UN / CLASS ด้วย — ตรวจในช่อง DG แล้ว)
+            _mk = str(m.get(k) or '')
+            for _rx in (r"TEMP(?:ERATURE)?\s*[:=]?\s*[-+]?\s*\d+(?:\.\d+)?\s*['°]?\s*C?",
+                        r"VENT(?:ILATION)?\s*[:=]?\s*(?:CLOSED?|OPEN|[\d.]+\s*(?:CBM\s*/\s*H(?:R)?|%)?)",
+                        r"\bHS\s*(?:CODE)?\s*[:.]?\s*[\d.]+", _DG_TOK, r"^\s*\([\d,]+\s+[A-Z][A-Z() ]*\)", _TR_TOK):
+                _mk = re.sub(_rx, ' ', _mk, flags=re.I)
+            _bk = re.sub(_TR_TOK, ' ', re.sub(_DG_TOK, ' ', bx, flags=re.I), flags=re.I)
+            e[k] = m[k] if _an(_bk) and _an(_bk) == _an(_mk) else bx
         # ช่องตัวเลขนอกกรอบแดง (ลูกค้าตีกรอบช่องอื่นในแถวเดียวกัน) = ไม่ได้แจ้ง → ใช้ค่า MF (ไม่ตรวจ) บอกค่าเดิมในหมายเหตุ
         _mfv = {'pkgs': lambda: be.pkgnum(m.get('pkg_hdr')), 'gw': lambda: be.num(m.get('gw')),
                 'meas': lambda: be.num(m.get('meas'))}
