@@ -24,6 +24,20 @@ skill is the single home for all of them.
     row is orange only when its container points at an unreadable scan page). The TOTAL row's MF sums leave
     those B/Ls out, and its note says how many.
   - An ENTER B/L missing from MF is still a red critical row at the end.
+- **User rule (2026-11-27, same day):** "UN CLASS ตรงกันไม่ต้องแจ้งเตือน ; TEMP ต้องกัน ไม่ต้องแจ้งแต่หาก m/f VENT
+  ไม่มีต้องแจ้งเตือน ; … ถูกต้องตามกฎ = แสดง - (แสดงค่าจริงเฉพาะตอนไม่ตรง/ต้องตรวจ) … แค่ตัดเรื่องตรวจ shed ออกไปเท่านั้น" →
+  - **DG**: ENTER and MF give the same UN numbers (and the same CLASS when both sides give one; CLASS only = same
+    CLASS) → white, no warning, not counted; cell shows the value. One side only / different = red as before.
+    MF / ENTER `CL9` is read as CLASS 9 (`find_dg`).
+  - **REEFER**: same TEMP on both sides → white, cell `0°C  (VENT 15CBM/H)`; but **MF text has no `VENT`** → red
+    `… (MF ไม่มี VENT)`. One side only / different TEMP = red as before.
+  - **TRANSIT/TRANSHIPMENT**: both sides give the same transit and MF ประเทศปลายทาง is correct and CARGO MOVEMENT
+    is not wrong → `-` (note keeps `TRANSIT ตรงกันและถูกต้องตามกฎ (…)`); otherwise red as before.
+  - SHED / ประเทศปลายทาง / CARGO MOVEMENT / TAX ID: correct = `-` (SHED is always `-`, not checked); real value
+    only when wrong / to check — same as the other forwarder checks.
+  - Regression 2026-11-27: only summary / REEFER / DG / TRANSIT / SHED / note cells changed in job-01…07;
+    the warnings left are one-sided DG/TEMP, MF without VENT (job-01 x2, job-04 x1) and transit whose MF rule
+    lines are missing (job-04).
 - Other global rules still built in: **WOODEN CASE ≠ CASE**; Laos = **(LA)**.
 
 ## GitHub repo (2026-11-27)

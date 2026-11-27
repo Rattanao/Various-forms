@@ -2028,7 +2028,7 @@ def apply_bundle_rules(MAN, ENT):
     for bl, e in ENT.items():
         # กฎผู้ใช้ (2026-11-27, SWDN 1002364): 'CL9' / 'CL 9' / 'CL.9' = 'CLASS 9' — แทนเฉพาะเมื่อ MF ของ B/L นั้น
         # เขียน CLASS เลขเดียวกัน (กัน 'CL1' ที่เป็นรหัสสินค้า) ; DG ของ ENTER อ่านใหม่ให้ได้ CLASS ด้วย
-        mt = ' '.join(str((MAN.get(bl) or {}).get(k) or '') for k in ('desc', 'dg')).upper()
+        mt = ' '.join(str((MAN.get(bl) or {}).get(k) or '') for k in ('desc', 'marks')).upper()   # ไม่ใช้ dg (MF CL9 → dg CLASS 9)
         for k in ('desc', 'desc_boxed', 'desc_boxed_full', 'marks', 'marks_boxed', 'marks_boxed_full'):
             if isinstance(e.get(k), str) and e[k]:
                 e[k] = re.sub(r'\bCL\.?\s?(\d(?:\.\d)?)\b',

@@ -67,7 +67,8 @@ DG_RE      = re.compile(r'\bCLASS\s*[0-9]|\bUN\s*[- ]?\d{3,4}\b', re.I)
 def find_dg(*txts):
     for t in txts:
         if t and DG_RE.search(t):
-            cl = re.search(r'CLASS\s*([0-9](?:\.[0-9])?)', t, re.I)
+            cl = re.search(r'CLASS\s*([0-9](?:\.[0-9])?)', t, re.I) \
+                or re.search(r'\bCL\.?\s?([0-9](?:\.[0-9])?)\b', t, re.I)   # [bundle-enter-check] CL9 = CLASS 9 (2026-11-27)
             un = re.search(r'UN\s*[- ]?\s*(\d{3,4})', t, re.I)
             return ' '.join(x for x in ((f'CLASS {cl.group(1)}' if cl else ''),
                                         (f'UN {un.group(1)}' if un else '')) if x) or t.strip()
@@ -240,7 +241,7 @@ def compute_extra_checks(m, e):
                                m.get('shed_no', ''))
     raw = m.get('shed_no') or ''
     if not CHECK_SHED:
-        out['shed'] = {'ok': None, 'text': raw.strip() or '-', 'note': None}
+        out['shed'] = {'ok': None, 'text': '-', 'note': None}   # ไม่ตรวจ → '-' (ผู้ใช้ 2026-11-27)
     elif ok is None:
         out['shed'] = {'ok': None, 'text': '-', 'note': None}
     elif ok and lbl == 'SHED ที่แจ้ง':
@@ -2774,7 +2775,28 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
                                         (f'MANIFEST: {re_m}' if re_m else '')) if p) or '-'
         dg = ' | '.join(p for p in ((f'ENTER: {dg_e}' if dg_e else ''),
                                     (f'MANIFEST: {dg_m}' if dg_m else '')) if p) or '-'
-        if re_e or re_m:
+        # [bundle-enter-check] ผู้ใช้ 2026-11-27: TEMP ตรงกันทั้ง 2 ฝั่ง ไม่ต้องเตือน — แต่ MF ไม่มี VENT ต้องเตือน ;
+        # DG ที่ UN ตรงกัน (และ CLASS ตรงกันเมื่อมีทั้ง 2 ฝั่ง) ไม่ต้องเตือน
+        _mf_txt = ' '.join(str(m.get(k) or '') for k in ('desc', 'reefer', 'marks', 'transit')).upper()
+        _vent = re.search(r'VENT(?:ILATION)?\s*[:=]?\s*([A-Z0-9./ ]{0,12}?)(?=\s|$|HS\b)', _mf_txt)
+        _t = lambda s: (lambda q: float(q.group(0)) if q else None)(re.search(r'[-+]?\d+(?:\.\d+)?', s or ''))
+        _un = lambda s: set(re.findall(r'UN\s*(\d{4})', s or '', re.I))
+        _cl = lambda s: set(re.findall(r'CLASS\s*(\d(?:\.\d)?)', s or '', re.I))
+        reefer_ok = bool(re_e and re_m and _t(re_e) is not None and _t(re_e) == _t(re_m))
+        dg_ok = bool(dg_e and dg_m and _un(dg_e) == _un(dg_m) and (_un(dg_e) or _cl(dg_e))
+                     and (not _cl(dg_e) or not _cl(dg_m) or _cl(dg_e) == _cl(dg_m))
+                     and (_un(dg_e) or _cl(dg_e) == _cl(dg_m)))
+        if reefer_ok and MF_ORDER:
+            if _vent:
+                mk(21, True)
+                reefer = f"{re_m}  (VENT {_vent.group(1).strip() or 'ระบุ'})"
+            else:
+                cs[21] = 'diff'
+                TOT['reefer'] += 1
+                reefer = f"{re_m}  (MF ไม่มี VENT)"
+                notes.append(f"REEFER TEMP ตรงกัน ({re_m}) แต่ MANIFEST ไม่ระบุ VENT — ต้องเพิ่ม/ยืนยัน VENT")
+                urgent.append(f"{WARN} MF ไม่มี VENT")
+        elif re_e or re_m:
             mk(21, False)
             TOT['reefer'] += 1
             tail = 'อีกฝั่งไม่ระบุ ; ' if bool(re_e) != bool(re_m) else ''
@@ -2782,7 +2804,10 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
             urgent.append(f"{WARN} REEFER {re_e or re_m}")
         else:
             mk(21, True)
-        if dg_e or dg_m:
+        if dg_ok and MF_ORDER:
+            mk(22, True)
+            dg = dg_m if len(dg_m) >= len(dg_e) else dg_e
+        elif dg_e or dg_m:
             mk(22, False)
             TOT['dg'] += 1
             tail = 'อีกฝั่งไม่ระบุ ; ' if bool(dg_e) != bool(dg_m) else ''
@@ -2797,7 +2822,16 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
         te_p, tm_p = extract_transit_phrase(te), extract_transit_phrase(tm)
         parts = [p for p in (te_p, tm_p) if p]
         transit_disp = ' / '.join(dict.fromkeys(parts)) if parts else '-'
-        if parts:
+        # [bundle-enter-check] ผู้ใช้ 2026-11-27: TRANSIT/TRANSHIPMENT ถูกต้องตามกฎ = '-' — ทั้ง 2 ฝั่งระบุตรงกัน
+        # และประเทศปลายทาง / CARGO MOVEMENT ของ MF ถูกต้อง → ไม่เตือน (ค่าจริงแสดงเฉพาะตอนไม่ตรง/ต้องตรวจ)
+        _xt = compute_extra_checks(m, e) if (MF_ORDER and te_p and tm_p) else None
+        transit_ok = bool(_xt and re.sub(r'[^A-Z]', '', te_p.upper()) == re.sub(r'[^A-Z]', '', tm_p.upper())
+                          and _xt['dest']['ok'] is True and _xt['mv']['ok'] in (True, None))
+        if transit_ok:
+            mk(23, True)
+            notes.append(f"TRANSIT ตรงกันและถูกต้องตามกฎ ({transit_disp})")
+            transit_disp = '-'
+        elif parts:
             mk(23, False)
             TOT['transit'] += 1
             notes.append(f"พบคำ transit/transhipment — {transit_disp} (ไม่ใช่ LOCAL, ตรวจประเภทใบขน: ถ่ายลำ/ผ่านแดน)")
@@ -3065,7 +3099,8 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
     c3 = ws.cell(3, 1, "สี: ขาว=ไม่ผิด | เขียว=ผ่าน (ช่องสรุป) | แดง ⚠=ไม่ตรง/จุดเร่งด่วน | ส้ม=ต้องยืนยัน | "
                         + ("เหลือง (ช่อง B/L NO.)=ไม่มี ENTER เทียบ ; เรียงตาม MF" if MF_ORDER else "เหลือง=ไม่มี ENTER เทียบ") + "    ||    "
                         "STATUS: CY,CY/CY,FCL,ลากตู้=CY ; LCL,ขน(ส่ง)=LCL ; CFS,LCL/CFS,เปิดตู้=LCL/CFS    ||    "
-                        + ("SHED NO.: ไม่ตรวจ (แสดงค่าใน MF)    ||    " if not CHECK_SHED else
+                        + ("SHED NO.: ไม่ตรวจ (-) ; DG: UN/CLASS ตรงกัน = ไม่เตือน ; REEFER: TEMP ตรงกัน = ไม่เตือน "
+                           "แต่ MF ไม่มี VENT = เตือน    ||    " if not CHECK_SHED else
                            f"SHED NO.: ต้องเป็น {EXPECTED_SHED} ทุก B/L (ตรง = -) ยกเว้น LAOS=0124 "
                            "(DISCHARGE BANGKOK)    ||    " if EXPECTED_SHED else
                            "SHED NO.: USED ENGINE/LAOS=0126/0124 (เฉพาะ DISCHARGE BANGKOK), DG=2826 (เฉพาะ LAEM "

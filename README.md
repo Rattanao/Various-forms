@@ -9,8 +9,8 @@
 - CONSIGNEE, CONTAINER NO., STATUS (CY / LCL / LCL-CFS)
 - TOTAL PACKAGE + ชนิดหีบห่อ (WOODEN CASE ≠ CASE), GROSS WEIGHT, MEASUREMENT (แจ้ง MF = 0.000)
 - MARKS, DESCRIPTION (ก่อน `AS PER ATTACHED SHEET` ตรวจ 30 ตัวอักษรแรก ; กรอบสีแดงของลูกค้า = ตรวจเฉพาะในกรอบ)
-- REEFER TEMP, DG (CLASS/UN), TRANSIT
-- ไม่ตรวจ SHED NO. (ช่อง SHED แสดงค่าใน MF) ; ตรวจประเทศปลายทาง (ลาว = LA), CARGO MOVEMENT
+- DG: UN / CLASS ตรงกัน = ไม่เตือน (`CL9` = CLASS 9) · REEFER: TEMP ตรงกัน = ไม่เตือน แต่ MF ไม่มี VENT = เตือน · TRANSIT/TRANSHIPMENT ตรงกันและ MF ถูกต้องตามกฎ = `-`
+- ประเทศปลายทาง (ลาว = LA), CARGO MOVEMENT, TAX ID เทียบ NOTIFY — **ถูกต้องตามกฎ = แสดง `-`** (แสดงค่าจริงเฉพาะตอนไม่ตรง/ต้องตรวจ) · **ไม่ตรวจ SHED NO.** (แสดง `-`)
 - แสดง **ทุก B/L ของ MF เรียงตามลำดับใน MF** — B/L ที่ไม่มี ENTER = **ช่อง B/L NO. สีเหลือง** ; B/L ที่มีใน ENTER แต่ไม่มีใน MF ขึ้นแถววิกฤต
 - B/L แตก (เช่น …664, …664A–L) เรียงต่อกัน ; หมายเหตุทุกแถวบอกหน้า ENTER `[ENTER หน้า n]`
 
