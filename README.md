@@ -7,8 +7,8 @@
 โปรแกรมแยก ENTER ทีละหน้า → รู้ว่าเป็นฟอร์มไหน → อ่านด้วยตัวอ่านของฟอร์มนั้น → เทียบกับ MF
 
 - CONSIGNEE, CONTAINER NO., STATUS (CY / LCL / LCL-CFS)
-- TOTAL PACKAGE + ชนิดหีบห่อ (WOODEN CASE ≠ CASE), GROSS WEIGHT, MEASUREMENT (แจ้ง MF = 0.000)
-- MARKS, DESCRIPTION (ก่อน `AS PER ATTACHED SHEET` ตรวจ 30 ตัวอักษรแรก ; กรอบสีแดงของลูกค้า = ตรวจเฉพาะในกรอบ)
+- TOTAL PACKAGE + ชนิดหีบห่อ (WOODEN CASE ≠ CASE, FLEXIBAG ≠ FLEXITANK), GROSS WEIGHT, MEASUREMENT (แจ้ง MF = 0.000)
+- MARKS, DESCRIPTION (ก่อน `AS PER ATTACHED SHEET` ตรวจ 30 ตัวอักษรแรก ; กรอบแดง / ป้ายสี / ขีดเส้นใต้ของลูกค้า = สิ่งที่ลูกค้าแจ้ง ต้องเท่ากับ MF (MARKS / MEAS. ที่ไม่ได้ทำเครื่องหมาย = ไม่ได้แจ้ง))
 - DG: CLASS / UN ตรงกันครบ = ไม่เตือน (`CL9` = CLASS 9) — ENTER ไม่ระบุ CLASS หรือ UN ที่ MF มี = เตือน · REEFER: TEMP ตรงกัน = ไม่เตือน แต่ MF ไม่มี VENT = เตือน · TRANSIT/TRANSHIPMENT ตรงกันและ MF ถูกต้องตามกฎ = `-`
 - ประเทศปลายทาง (ลาว = LA), CARGO MOVEMENT, TAX ID เทียบ NOTIFY — **ถูกต้องตามกฎ = แสดง `-`** (แสดงค่าจริงเฉพาะตอนไม่ตรง/ต้องตรวจ)
 - **SHED (DG_M/F)** ตรวจเฉพาะ DG ที่ DISCHARGE LAEM CHABANG ต้องเป็น **2826** (ไม่ตรง = เตือน) นอกนั้นไม่ตรวจ

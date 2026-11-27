@@ -72,6 +72,18 @@ skill is the single home for all of them.
   data and is checked in full** (user confirmed 2026-11-27 with `HASLC…797_ตามหน้า BL .pdf` / `_CY.pdf`: MEAS. 55
   vs MF 0.000 stays red). A short FreeText ending in `CY` / `CY/CY` / `FCL` / `LCL` (≤ 30 characters) is the
   customer's STATUS (regression: 8 STATUS cells in job-02 / job-06 went from "(ไม่ระบุใน ENTER)" to CY, all = MF).
+  **Customer markings (2026-11-27, SWDN 1002637 + "MARKS อยู่นอกกรอบหรือขีดเส้นใต้, ป้ายสี ถือว่าลูกค้าไม่ได้แจ้ง
+  ขึ้นเตือนด้วย"):** a red box, a **highlight** (ป้ายสี), an **underline** and a **pen line (Ink)** all mean "this is
+  what the customer declared" — `mark_rects()` = `red_boxes()` + Highlight / Underline / Squiggly / Ink annots +
+  strong-colour fills / thin colour lines printed in the page; it replaces `red_boxes()` for BLFORM pages. A mark over
+  part of a line counts (number cells: overlap; text: word by word). When anything in the cargo area is marked:
+  MARKS / DESC = the marked text (must equal MF); TOTAL PKG / G.W. not marked = not checked; MEAS. not marked = MF must
+  be 0.000; **MARKS not marked = not declared → MF must have no MARKS** (cell `(ลูกค้าไม่ได้แจ้ง MARKS)`, red) —
+  except when the B/L page's MARKS is `AS PER ATTACHED RIDER/SHEET` (marks are on the rider). MARKS takes every marked
+  line (not only the box over its first line). Container-count lines `20'X1/40'HQX1` are not MARKS.
+  **FLEXIBAG ≠ FLEXITANK** (ENTER `1 FLEXIBAG` vs MF `1 FE (FLEXITANK(s))` = PACKAGING red; the earlier FLEXI→TANK
+  mapping was wrong). Regression: 10 B/Ls changed in job-01…07, all by these rules (marked text shorter than MF,
+  MEAS. marked ≠ MF 0.000, unmarked MEAS. vs MF value, FLEXIBAG).
   **Boxed MARKS/DESC = what the customer declared (2026-11-27, SWDN 1002618 "ENTER มีตีกรอบ คือสิ่งที่ลูกค้า ENTER
   ไม่ตรงกับ M/F ขึ้นเตือนด้วย"):** the MF must **equal** the boxed text (before: it was enough that the MF contained
   it). Not counted on either side: TEMP / VENT / HS CODE, DG tokens (`_DG_TOK`: UN NO: 2265, CLASS:8+6.1, CL9,
@@ -250,7 +262,7 @@ then run the regression (end of this section). Prefer **one `FORM_PROFILES` entr
 | **UNICORN GLOBAL LOGISTICS** AMENDMENT with `B/L CHANGE NO.` (no HB/L NO) | no longer routed to SHARED_AGN (layout D misread it) — TABLE + the UNICORN profile; `***јѥдшѬҖ***` = ลากตู้ | 2026-11-27 (job-07 p26) |
 | **Sahathai Terminal** (สหไทย) "pre-lading manifest" letter (Consignee Name / No of package / Description of goods / G.W. / Mark & No.; `Meas.` printed under G.W.; `(HEAD OFFICE)` on the line under the name) | LETTER + profile `SAHATHAI TERMINAL`; `(HEAD OFFICE)` / `(BRANCH …)` joined to the name | 2026-11-27 (job-07 p27) |
 | MF that prints the **container count `X1` / `X2`** as the first line of the description column (SAWASDEE DENEB 2612S) | `X<n>` removed from MF DESC when n = the B/L's container count | 2026-11-27 (job-07) |
-| ENTER package `FLEXIBAG` / `FLEXITANK` | = TANK (MF `TK (TANK)`) | 2026-11-27 (job-07 p10) |
+| ENTER package `FLEXIBAG` / `FLEXITANK` | kept apart: FLEXIBAG ≠ FLEXITANK (user, 2026-11-27) | 2026-11-27 (job-07 p10) |
 | STATUS typed `ลากตุ้` (ุ instead of ู) | repaired to ลากตู้ = CY | 2026-11-27 (job-07 p32) |
 | ENTER `CL9` / `CL 9` / `CL.9` vs MF `CLASS 9` (user: "CL ก็คือ CLASS ถูกต้อง") | `apply_bundle_rules` turns `CL n` into `CLASS n` in ENTER DESC/MARKS (also the red-box text) only when that B/L's MF has `CLASS n`; ENTER DG gets the CLASS from it. Regression: job-07 13 cells (1002364 DESC now matches, 3 DG B/Ls show CLASS 9), job-01…06 0 | 2026-11-27 (job-07 p6, p7, p16) |
 | Scanned ARRIVAL NOTICE: weight row 4–5pt off the SHIPPER'S LOAD row, `24,016.000 KGS :` (column rule read as `:`), `55. eoeo` / `49, øee` (space inside a number), `CBM` unreadable, `& WEIGHT` split off | OCR row tolerance 6pt (OCR only), leading/trailing `:` dropped, number pieces joined, a bare decimal right of the weight = MEAS., `KGS 89.0000 CBM` in one piece → number after KGS | 2026-11-27 (job-07 p24, p16) |

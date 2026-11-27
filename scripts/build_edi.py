@@ -327,6 +327,10 @@ def canon_pkg(s):
     u = re.sub(r'INTERMEDIATE\s+BULK\s+CONTAINERS?', 'IBC', u)
     # [bundle-enter-check] + PAIL / TRAY / TANK (SAWASDEE MIMOSA 2611S: ENTER '240 PAILS' = MF '240 PL (PAIL(s))',
     # ENTER '4 TRAYS' = MF TRAY) — 2026-11-25
+    # [bundle-enter-check] FLEXIBAG ≠ FLEXITANK (ผู้ใช้ 2026-11-27, SWDN 1002637: ENTER 1 FLEXIBAG / MF 1 FE (FLEXITANK(s)))
+    for w in ('FLEXIBAG', 'FLEXITANK'):
+        if re.sub(r'[\s-]', '', u).find(w) >= 0:
+            return w
     for w in ('WOODEN CASE', 'PALLET', 'CARTON', 'PACKAGE', 'CASE', 'BOX', 'SET', 'DRUM',
               'ROLL', 'BAG', 'BALE', 'CRATE', 'UNIT', 'PIECE', 'SKID', 'BUNDLE', 'PAIL', 'TRAY', 'TANK', 'IBC'):
         if w in u:

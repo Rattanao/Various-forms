@@ -342,6 +342,41 @@ def red_boxes(pg):
     return out
 
 
+def mark_rects(pg):
+    """ทุกเครื่องหมายที่ลูกค้าใช้บอก "ส่วนที่ ENTER" (ผู้ใช้ 2026-11-27, SWDN 1002637): กรอบแดง + ป้ายสี (Highlight)
+       + ขีดเส้นใต้ (Underline / Squiggly) — ทั้งแบบ annotation และแบบที่พิมพ์รวมเป็นเส้น/พื้นสีในหน้า"""
+    rot = page_rot(pg)
+    fix = lambda r: r if rot not in ((0, -1), (0, 1)) else pymupdf.Rect(_unrotate(pg, rot, *r))
+    out = list(red_boxes(pg))
+    seen = lambda r: any(abs(r.x0 - o.x0) < 3 and abs(r.y0 - o.y0) < 3 and abs(r.x1 - o.x1) < 3 for o in out)
+    for a in pg.annots() or []:
+        if a.type[1] in ('Highlight', 'Underline', 'Squiggly', 'Ink'):       # Ink = เส้นปากกาที่ลูกค้าขีดใต้ข้อความ
+            r = fix(pymupdf.Rect(a.rect))
+            if a.type[1] != 'Highlight':                 # เส้นใต้: ขยายขึ้นไปครอบตัวหนังสือเหนือเส้น
+                r = pymupdf.Rect(r.x0, min(r.y0, r.y1 - 12), r.x1, r.y1)
+            if not seen(r):
+                out.append(r)
+    try:
+        drs = pg.get_drawings()
+    except Exception:
+        drs = []
+    for dr in drs:
+        r = dr.get('rect')
+        if r is None or r.width < 15:
+            continue
+        f, c = dr.get('fill'), dr.get('color')
+        strong = lambda v: v and len(v) >= 3 and max(v) - min(v) > 0.45    # สีสด (ไม่ใช่ขาว/ดำ/เทา ของแบบฟอร์ม)
+        if strong(f) and 6 < r.height < 25:                                 # พื้นสีป้ายทับตัวหนังสือ
+            r2 = fix(r)
+        elif strong(c) and r.height < 3 and not f:                         # เส้นใต้สีที่พิมพ์รวมในหน้า
+            r2 = fix(pymupdf.Rect(r.x0, r.y1 - 12, r.x1, r.y1 + 1))
+        else:
+            continue
+        if not seen(r2):
+            out.append(r2)
+    return out
+
+
 def parse_blform(lines, annots, page, gap_cut=False, boxes=None, words=None):
     """gap_cut (OCR ของสแกน): ตัดพื้นที่สินค้าที่ช่องว่างแนวตั้ง > 70pt — ใต้นั้นคือโน้ตลายมือ/ตรายางของลูกค้า
        boxes: กรอบสีแดงของลูกค้า — MARKS/DESC ตรวจเฉพาะข้อความในกรอบ"""
@@ -426,7 +461,7 @@ def parse_blform(lines, annots, page, gap_cut=False, boxes=None, words=None):
             cargo = [l for l in cargo if l['y'] < cut]
     cont_line = lambda t: bool(CONT2_RE.search(t.upper())) and bool(
         re.match(r"^(?:R?\d{2}[A-Z]{0,3}'?)?\s*[A-Z]{3}[UJZ]\d{7}", nospace(t)))
-    noise = lambda t: bool(re.match(r"^\d{2}'?[A-Z]*X\d+$", nospace(t))) or nospace(t).startswith('PARTICULARSFURNISHED') \
+    noise = lambda t: bool(re.match(r"^(?:\d{2}'?[A-Z]*X\d+/?)+$", nospace(t))) or nospace(t).startswith('PARTICULARSFURNISHED') \
         or nospace(t) in ("SAIDTOCONTAIN", "SHIPPER'SLOAD,COUNT&WEIGHT")
     marks, desc, typed = [], [], []
     box_of = lambda l: next((b for b in boxes or [] if b.x0 - 2 <= l['x'] and l['x1'] <= b.x1 + 2
@@ -435,6 +470,8 @@ def parse_blform(lines, annots, page, gap_cut=False, boxes=None, words=None):
     box_m = box_d = None
     in_box = lambda l: False
     bm, bd = [], []                         # บรรทัดที่อยู่ในกรอบสีแดงของลูกค้า
+    _ovl0 = lambda l: any(b.x0 - 2 < l['x1'] and l['x'] < b.x1 + 2 and b.y0 - 3 <= l['y'] + 4 <= b.y1 + 3
+                          and (min(l['x1'], b.x1) - max(l['x'], b.x0)) >= 0.6 * (l['x1'] - l['x']) for b in boxes or [])
     for l in sorted(cargo, key=lambda l: (l['y'], l['x'])):
         t = l['t']
         if l is pkl or noise(t):
@@ -447,7 +484,7 @@ def parse_blform(lines, annots, page, gap_cut=False, boxes=None, words=None):
                 if not marks:
                     box_m = box_of(l)
                 marks.append(t)
-                if box_m is not None and box_of(l) is box_m:
+                if box_of(l) is not None or _ovl0(l):      # MARKS: ทุกบรรทัดที่มีเครื่องหมาย (2026-11-27)
                     bm.append(t)
         elif l['x'] < x_gw:
             if not desc:
@@ -480,10 +517,18 @@ def parse_blform(lines, annots, page, gap_cut=False, boxes=None, words=None):
         rec['marks_boxed'], rec['marks_boxed_full'] = ' '.join(bm), rec['marks']
     # กฎผู้ใช้ (2026-11-27, SWDN 1100797): กรอบแดงครอบช่องตัวเลข (จำนวน / G.W. / MEAS.) = ลูกค้าแจ้งเฉพาะช่องในกรอบ —
     # ช่องตัวเลขที่ไม่อยู่ในกรอบ "ไม่ได้ใส่ข้อมูลนั้น" → ไม่ตรวจ (ตีกรอบแค่ Gross weight → MEAS. ไม่ตรวจ)
+    # (2026-11-27 SWDN 1002637: ป้ายสี / ขีดเส้นใต้ นับเหมือนกรอบ และทับแค่บางส่วนของบรรทัดก็นับ — '1 FLEXIBAG,')
+    _ovl = lambda l: any(b.x0 - 2 < l['x1'] and l['x'] < b.x1 + 2 and b.y0 - 3 <= l['y'] + 4 <= b.y1 + 3
+                         for b in boxes or [])
     _num = {'pkgs': pkl, 'gw': kgs, 'meas': cbm}
-    _in = {k for k, l in _num.items() if l is not None and box_of(l)}
-    if _in:
+    _in = {k for k, l in _num.items() if l is not None and (box_of(l) or _ovl(l))}
+    cargo_marked = bool(_in or bd or bm)
+    if cargo_marked:
         rec['skip_fields'] = [k for k in _num if k not in _in and rec.get(k) is not None]
+    # ผู้ใช้ 2026-11-27: "MARKS อยู่นอกกรอบ / ไม่ขีดเส้นใต้ / ไม่ป้ายสี ถือว่าลูกค้าไม่ได้แจ้ง ขึ้นเตือนด้วย" — ลูกค้าทำ
+    # เครื่องหมายในช่องสินค้าแล้วแต่ไม่ได้ทำที่ MARKS → MARKS ไม่ได้แจ้ง (MF ต้องไม่มี MARKS)
+    if cargo_marked and marks and not bm:
+        rec['marks_unmarked'] = rec['marks']
     if rec['pkgs'] and not rec['pkgtype']:   # ชนิดหีบห่ออยู่ในรายละเอียด: '920 PACKAGES = 920 BASKETS'
         mp = re.search(rf"\b{rec['pkgs']}\s+([A-Z()]+)", rec['desc'], re.I)
         if mp and PKG_WORD_RE.match(mp.group(1)):
@@ -1477,7 +1522,7 @@ def parse_enter_bundle(path, bl_re, man_bls=()):
             table_doc = None
         if kind == 'BLFORM':
             _pg = doc[p - 1]
-            recs = parse_blform(ls, an, p, boxes=red_boxes(_pg),
+            recs = parse_blform(ls, an, p, boxes=mark_rects(_pg),
                                 words=_pg.get_text('words') if page_rot(_pg) not in ((0, -1), (0, 1)) else None)
             if p in garbled:
                 for r in recs.values():
@@ -2087,9 +2132,11 @@ def apply_bundle_rules(MAN, ENT):
             e['dg'] = be.find_dg(_dt) or e['dg']
         if re.search(r'\bREELS?\b', e.get('pkgtype') or '', re.I):
             e['pkgtype'] = 'REEL (ROLL)'
-        # 'FLEXIBAG' / 'FLEXITANK' = ถุงของเหลวในตู้ = TANK ของ MF (SWDN 2026-11-27 '1 FLEXIBAG, FLEXI')
-        if re.search(r'FLEXI', e.get('pkgtype') or '', re.I):
-            e['pkgtype'] = 'TANK'
+        # ผู้ใช้ 2026-11-27 (SWDN 1002637): FLEXIBAG ≠ FLEXITANK (เหมือน WOODEN CASE ≠ CASE) — เดิมแปลงเป็น TANK ทั้งคู่ (ผิด)
+        if re.search(r'FLEXI\s*-?\s*BAG|^\s*FLEXI\b(?!\s*-?\s*TANK)', e.get('pkgtype') or '', re.I):
+            e['pkgtype'] = 'FLEXIBAG'
+        elif re.search(r'FLEXI\s*-?\s*TANK', e.get('pkgtype') or '', re.I):
+            e['pkgtype'] = 'FLEXITANK'
         # STATUS พิมพ์สระผิด 'ลากตุ้' (ุ แทน ู) / ฟอนต์ถอดเป็นซีริลลิก — ซ่อมก่อนแปลงเป็น CY
         if e.get('status_raw'):
             e['status_raw'] = fix_thai_garble(e['status_raw'].replace('ตุ้', 'ตู้'))
@@ -2126,7 +2173,17 @@ def apply_bundle_rules(MAN, ENT):
                         r"\bHS\s*(?:CODE)?\s*[:.]?\s*[\d.]+", _DG_TOK, r"^\s*\([\d,]+\s+[A-Z][A-Z() ]*\)", _TR_TOK):
                 _mk = re.sub(_rx, ' ', _mk, flags=re.I)
             _bk = re.sub(_TR_TOK, ' ', re.sub(_DG_TOK, ' ', bx, flags=re.I), flags=re.I)
-            e[k] = m[k] if _an(_bk) and _an(_bk) == _an(_mk) else bx
+            # MF '… *AS PER ATTACHED SHEET*' → กฎ 30 ตัวอักษรแรก (2026-11-25) ใช้กับข้อความในกรอบด้วย
+            _ap = re.search(r'\*?\s*AS\s*PER\s*ATTA\s*CHED\s*SHEETS?\s*\*?', str(m.get(k) or ''), re.I)
+            _pre = _an(str(m.get(k) or '')[:_ap.start()])[:30] if _ap else ''
+            e[k] = m[k] if _an(_bk) and (_an(_bk) == _an(_mk) or (_pre and _an(_bk).startswith(_pre))) else bx
+        # MARKS ไม่ได้ทำเครื่องหมาย (ลูกค้าทำที่ช่องอื่นแล้ว) = ไม่ได้แจ้ง → MF ต้องไม่มี MARKS (ว่าง / N/M) ; มี = เตือน
+        um = e.pop('marks_unmarked', None)
+        if um is not None and not e.get('marks_inbox') \
+                and not re.search(r'AS\s*PER\s*ATTA|SEE\s*ATTA|ATTACHED\s*(?:RIDER|SHEET)', um, re.I):   # MARKS อยู่ใน RIDER
+            e['marks_nodecl'] = um
+            e['marks'] = m['marks'] if re.fullmatch(r'\s*(?:N\s*/\s*M|NO\s*MARKS?|-)?\s*', m.get('marks') or '') \
+                else '(ลูกค้าไม่ได้แจ้ง MARKS)'
         # ช่องตัวเลขนอกกรอบแดง (ลูกค้าตีกรอบช่องอื่นในแถวเดียวกัน) = ไม่ได้แจ้ง → ใช้ค่า MF (ไม่ตรวจ) บอกค่าเดิมในหมายเหตุ
         _mfv = {'pkgs': lambda: be.pkgnum(m.get('pkg_hdr')), 'gw': lambda: be.num(m.get('gw')),
                 'meas': lambda: be.num(m.get('meas'))}
@@ -2267,6 +2324,9 @@ def annotate_report(outpath, MAN, ENT, info):
                         prefix += f"{lbl} ตรง (MANIFEST เป็นส่วนหนึ่งของ B/L) — ENTER มีเพิ่ม: {ENT[bl][k + '_extra']} ; "
                     if ENT[bl].get(k + '_inbox'):
                         prefix += f"{lbl} ตรวจเฉพาะในกรอบแดงของลูกค้า: {ENT[bl][k + '_inbox']} ; "
+            if ENT[bl].get('marks_nodecl'):
+                prefix += (f"MARKS ไม่ได้ทำเครื่องหมาย (กรอบแดง / ป้ายสี / ขีดเส้นใต้) = ลูกค้าไม่ได้แจ้ง → MF ต้องไม่มี MARKS "
+                           f"(ENTER พิมพ์: {ENT[bl]['marks_nodecl']}) ; ")
             _lb = {'pkgs': 'TOTAL PKG', 'gw': 'G.W.', 'meas': 'MEAS.'}
             for k, v in (ENT[bl].get('unboxed') or {}).items():
                 if k == 'meas':
