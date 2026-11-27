@@ -36,6 +36,9 @@ at word gaps > 1.1 × line height and at lone `:`/`|` (Tesseract joins columns t
 `©`→0, then pass 2 runs with `BROWSER_OCR = Map{page: lines}` (number keys!). Test 2026-11-27 on job-05: text pages
 identical to the PC run, 16/16 B/Ls found; scan pages differ (Tesseract is weaker on some fields, better on others) —
 they stay orange. Big scan-heavy bundles are slow online; the PC version (Windows OCR) is the accurate one.
+Look = the other forwarder pages (M INTER etc.): navy header + `app/hal-logo.png` + "Project by …", one drop zone
+with MANIFEST/ENTER chips, SHED (one number or LCL/CFS + CY), result card with VESSEL/ENTER/OCR info, count chips,
+colour legend, search + "only mismatches", table read back from the EDI.xlsx (`_table`), download button.
 `window.CheckVarious.run(mfFile, enterFile, {shed})` / `.boot()` / `.py()` are test hooks. Bump `app.js?v=` in
 `index.html` when app.js changes. `guide.html` (= `docs/index.html`) is the guide + ZIP download. **To update the repo after changing this skill:** copy `SKILL.md` + `scripts/*.py|ps1`
 into the clone, run the sanitizer (customer names used as examples → ABC/XYZ, real B/L digits → 0, real
