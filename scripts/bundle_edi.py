@@ -2356,7 +2356,7 @@ def main(argv=None):
     print(f'บันทึกแล้ว: {outpath}')
     print(f'B/L ทั้งหมด {stats["bl"]} | จุดต้องตรวจ {stats["issue_rows"]} แถว | STATUS ไม่ตรง {stats["st_bad"]} | '
           f'DG {stats["dg"]} | REEFER {stats["reefer"]} | TRANSIT {stats["transit"]}')
-    print((f'SHED NO. ไม่ตรง {stats["shed_bad"]} | ' if be.CHECK_SHED else 'SHED NO. ไม่ตรวจ | ') + f'ประเทศปลายทาง ไม่ตรง {stats["dest_bad"]} | '
+    print((f'SHED NO. ไม่ตรง {stats["shed_bad"]} | ' if be.CHECK_SHED else f'SHED DG (2826) ไม่ตรง {stats["shed_bad"]} | ') + f'ประเทศปลายทาง ไม่ตรง {stats["dest_bad"]} | '
           f'CARGO MOVEMENT ไม่ตรง {stats["mv_bad"]} | TAX ID ไม่ตรง NOTIFY {stats["tax_bad"]}')
     for good, bad in typos:
         print(f'⚠️  เลข B/L ใน ENTER พิมพ์ผิด: {bad} → น่าจะเป็น {good} (เทียบค่ากับ {good} แล้ว)')

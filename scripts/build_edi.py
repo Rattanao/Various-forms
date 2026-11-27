@@ -61,15 +61,16 @@ pymupdf.Page.get_text = _clean_get_text
 # ═══════════════════════════ regex / ตัวช่วยที่ใช้ร่วมกัน ═══════════════════════════
 CONT_RE    = re.compile(r'[A-Z]{4}\d{6,7}')                      # เลขตู้ ISO 6346
 TRANSIT_RE = re.compile(r'IN[\s-]?TRANSIT|TRANS[\s-]?S?HIP(?:MENT)?|TRANSIT\s*PORT', re.I)
-DG_RE      = re.compile(r'\bCLASS\s*[0-9]|\bUN\s*[- ]?\d{3,4}\b', re.I)
+# [bundle-enter-check] 2026-11-27: MF 'CLASS: 9, UN: 3077HS CODE' (มี ':' และ HS ติดท้าย) ก็เป็น DG
+DG_RE      = re.compile(r'\bCLASS\s*:?\s*[0-9]|\bUN\s*[-: ]?\s*\d{4}(?!\d)', re.I)
 
 
 def find_dg(*txts):
     for t in txts:
         if t and DG_RE.search(t):
-            cl = re.search(r'CLASS\s*([0-9](?:\.[0-9])?)', t, re.I) \
+            cl = re.search(r'CLASS\s*:?\s*([0-9](?:\.[0-9])?)', t, re.I) \
                 or re.search(r'\bCL\.?\s?([0-9](?:\.[0-9])?)\b', t, re.I)   # [bundle-enter-check] CL9 = CLASS 9 (2026-11-27)
-            un = re.search(r'UN\s*[- ]?\s*(\d{3,4})', t, re.I)
+            un = re.search(r'UN\s*[-: ]?\s*(\d{4})(?!\d)', t, re.I) or re.search(r'UN\s*[- ]?\s*(\d{3,4})', t, re.I)
             return ' '.join(x for x in ((f'CLASS {cl.group(1)}' if cl else ''),
                                         (f'UN {un.group(1)}' if un else '')) if x) or t.strip()
     return ''
@@ -241,7 +242,17 @@ def compute_extra_checks(m, e):
                                m.get('shed_no', ''))
     raw = m.get('shed_no') or ''
     if not CHECK_SHED:
-        out['shed'] = {'ok': None, 'text': '-', 'note': None}   # ไม่ตรวจ → '-' (ผู้ใช้ 2026-11-27)
+        # ผู้ใช้ 2026-11-27: ไม่ตรวจ SHED ยกเว้น DG ที่ DISCHARGE LAEM CHABANG ต้องเป็น 2826 (MF มี CLASS/UN)
+        # ช่อง SHED (MANIFEST) แสดงค่าใน MF เสมอ ; ผิด = แดง '(ต้องเป็น 2826 — DG LAEM CHABANG)'
+        act = (re.search(r'\d{3,4}', raw) or [''])[0].zfill(4) if re.search(r'\d{3,4}', raw) else ''
+        if 'LAEM CHABANG' in (m.get('port_discharge') or '').upper() \
+                and re.search(r'CLASS|UN\s*\d', m.get('dg') or '', re.I):
+            ok = act == '2826'
+            out['shed'] = {'ok': ok, 'text': (raw.strip() or '(ว่าง)') + ('' if ok else '  (ต้องเป็น 2826 — DG LAEM CHABANG)'),
+                           'note': None if ok else f"SHED NO. ไม่ตรง — DG ที่ DISCHARGE LAEM CHABANG ต้องเป็น 2826 "
+                                                   f"(MANIFEST: {raw.strip() or '(ว่าง)'})"}
+        else:
+            out['shed'] = {'ok': None, 'text': raw.strip() or '-', 'note': None}
     elif ok is None:
         out['shed'] = {'ok': None, 'text': '-', 'note': None}
     elif ok and lbl == 'SHED ที่แจ้ง':
@@ -2548,7 +2559,7 @@ HEAD = ['สรุปผลเร่งด่วน', 'B/L NO.',
         'MARKS (ENTER)', 'MARKS (MANIFEST)',
         'DESC. (ENTER)', 'DESC. (MANIFEST)',
         'REEFER TEMP', 'DG', 'TRANSIT/TRANSHIPMENT',
-        'SHED NO.', 'ประเทศปลายทาง', 'CARGO MOVEMENT',
+        'SHED (MANIFEST)', 'ประเทศปลายทาง', 'CARGO MOVEMENT',
         'หมายเหตุ / จุดที่ไม่ตรงกัน']
 NC = len(HEAD)
 # เลขคอลัมน์ "เดิม" ที่ตรรกะการตรวจในฟังก์ชันนี้ใช้อ้างอิงตลอด (mk()/cs[...]/row เรียงตามนี้)
@@ -2783,9 +2794,10 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
         _un = lambda s: set(re.findall(r'UN\s*(\d{4})', s or '', re.I))
         _cl = lambda s: set(re.findall(r'CLASS\s*(\d(?:\.\d)?)', s or '', re.I))
         reefer_ok = bool(re_e and re_m and _t(re_e) is not None and _t(re_e) == _t(re_m))
-        dg_ok = bool(dg_e and dg_m and _un(dg_e) == _un(dg_m) and (_un(dg_e) or _cl(dg_e))
-                     and (not _cl(dg_e) or not _cl(dg_m) or _cl(dg_e) == _cl(dg_m))
-                     and (_un(dg_e) or _cl(dg_e) == _cl(dg_m)))
+        # ผู้ใช้ 2026-11-27: ENTER ต้องระบุ CLASS และ UN ครบตามที่ MF มี — ขาด = เตือน
+        dg_ok = bool(dg_e and dg_m and (_un(dg_m) or _cl(dg_m)) and _un(dg_e) == _un(dg_m)
+                     and (not _cl(dg_m) or _cl(dg_e) == _cl(dg_m)))
+        _dg_miss = [x for x, f in (('CLASS', _cl), ('UN', _un)) if f(dg_m) and not f(dg_e)] if dg_m else []
         if reefer_ok and MF_ORDER:
             if _vent:
                 mk(21, True)
@@ -2811,8 +2823,11 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
             mk(22, False)
             TOT['dg'] += 1
             tail = 'อีกฝั่งไม่ระบุ ; ' if bool(dg_e) != bool(dg_m) else ''
+            if MF_ORDER and _dg_miss:
+                tail = f"ENTER ไม่ระบุ {' / '.join(_dg_miss)} ; "
             notes.append(f"DG {dg} — {tail}ต้องสำแดงวัตถุอันตราย (CLASS/UN) + แนบ MSDS/DGD")
-            urgent.append(f"{WARN} DG {dg_e or dg_m}")
+            urgent.append(f"{WARN} DG ENTER ไม่ระบุ {' / '.join(_dg_miss)}" if MF_ORDER and _dg_miss
+                          else f"{WARN} DG {dg_e or dg_m}")
         else:
             mk(22, True)
 
@@ -3050,7 +3065,7 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
             f"{TOT['me']:,.3f}", f"{TOT['mm']:,.3f}",
             '', '', '', '',
             f"{TOT['reefer']} B/L", f"{TOT['dg']} B/L", f"{TOT['transit']} B/L",
-            f"SHED ไม่ตรง {TOT['shed_bad']} B/L" if CHECK_SHED else 'SHED: ไม่ตรวจ', f"ปลายทางไม่ตรง {TOT['dest_bad']} B/L",
+            f"SHED ไม่ตรง {TOT['shed_bad']} B/L" if CHECK_SHED else f"SHED DG ไม่ตรง {TOT['shed_bad']} B/L", f"ปลายทางไม่ตรง {TOT['dest_bad']} B/L",
             f"MOVEMENT ไม่ตรง {TOT['mv_bad']} / ต้องตรวจ {TOT['mv_review']} B/L",
             f"TAX ID ไม่ตรง {TOT['tax_bad']} B/L",
             (decl_txt + (f"ยอด MF ไม่รวม {TOT['no_ent']} B/L ที่ไม่มี ENTER (ช่อง B/L สีเหลือง) ; " if TOT.get('no_ent') else '')
@@ -3099,7 +3114,7 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
     c3 = ws.cell(3, 1, "สี: ขาว=ไม่ผิด | เขียว=ผ่าน (ช่องสรุป) | แดง ⚠=ไม่ตรง/จุดเร่งด่วน | ส้ม=ต้องยืนยัน | "
                         + ("เหลือง (ช่อง B/L NO.)=ไม่มี ENTER เทียบ ; เรียงตาม MF" if MF_ORDER else "เหลือง=ไม่มี ENTER เทียบ") + "    ||    "
                         "STATUS: CY,CY/CY,FCL,ลากตู้=CY ; LCL,ขน(ส่ง)=LCL ; CFS,LCL/CFS,เปิดตู้=LCL/CFS    ||    "
-                        + ("SHED NO.: ไม่ตรวจ (-) ; DG: UN/CLASS ตรงกัน = ไม่เตือน ; REEFER: TEMP ตรงกัน = ไม่เตือน "
+                        + ("SHED: ตรวจเฉพาะ DG ที่ DISCHARGE LAEM CHABANG = 2826 ; DG: CLASS/UN ตรงกันครบ = ไม่เตือน (ENTER ไม่ระบุ CLASS/UN = เตือน) ; REEFER: TEMP ตรงกัน = ไม่เตือน "
                            "แต่ MF ไม่มี VENT = เตือน    ||    " if not CHECK_SHED else
                            f"SHED NO.: ต้องเป็น {EXPECTED_SHED} ทุก B/L (ตรง = -) ยกเว้น LAOS=0124 "
                            "(DISCHARGE BANGKOK)    ||    " if EXPECTED_SHED else

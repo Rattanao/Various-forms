@@ -35,6 +35,18 @@ skill is the single home for all of them.
     is not wrong → `-` (note keeps `TRANSIT ตรงกันและถูกต้องตามกฎ (…)`); otherwise red as before.
   - SHED / ประเทศปลายทาง / CARGO MOVEMENT / TAX ID: correct = `-` (SHED is always `-`, not checked); real value
     only when wrong / to check — same as the other forwarder checks.
+- **User rule (2026-11-27, later): SHED is checked for one case only — DG at DISCHARGE LAEM CHABANG must be 2826.**
+  "เพิ่มกฎการตรวจ SHED 2826 DG สำหรับ DISCHARGE LAEM CHABANG เท่านั้น หาก M/F ปรากฏ dg class un แล้วใส่ shed ไม่ถูกให้
+  แจ้งเตือน เพิ่มหัวข้อ SHED (MANIFEST) และหาก ENTER ไม่มี class un ให้แจ้งเตือน" →
+  - The column is now **SHED (MANIFEST)** and always shows the MF value. When MF port of discharge is LAEM CHABANG
+    and MF has DG (CLASS or UN), SHED ≠ 2826 → red `… (ต้องเป็น 2826 — DG LAEM CHABANG)`; every other B/L is not
+    checked (white). TOTAL cell `SHED DG ไม่ตรง n B/L`.
+  - DG passes only when ENTER gives **every** CLASS and UN the MF gives, with the same values; a missing one →
+    red `DG ENTER ไม่ระบุ CLASS / UN`.
+  - `DG_RE` / `find_dg` now read `CLASS: 9`, `UN: 3077` and `UN: 3077HS CODE` (colon / glued HS) — MF of SWDN
+    1001886 was not seen as DG before.
+  - Regression: no wrong DG SHED in job-01…07 (job-02 / job-07 DG at Laem Chabang all 2826, job-06 DG is BANGKOK
+    0121 = not checked); newly seen DG B/Ls (CLASS:/UN: with colon) mostly pass; OCR / one-sided ones warn.
 - **User rule (2026-11-27, SWDN 1100797):** "enter ไม่ได้ใส่กรอบแสดงว่าไม่ใส่ข้อมูลนั้น ถ้าหากมีกรอบแสดงว่าเอาส่วนนั้น"
   → on a Heung-A B/L page (BLFORM), when a red box covers one of the number cells (TOTAL PKG / G.W. / MEAS.),
   the number cells **outside** any red box were not given by the customer: they are not checked (ENTER value
