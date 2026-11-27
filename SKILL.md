@@ -81,10 +81,10 @@ skill is the single home for all of them.
   be 0.000; **MARKS not marked = not declared → MF must have no MARKS** (cell `(ลูกค้าไม่ได้แจ้ง MARKS)`, red) —
   except when the B/L page's MARKS is `AS PER ATTACHED RIDER/SHEET` (marks are on the rider). MARKS takes every marked
   line (not only the box over its first line). Container-count lines `20'X1/40'HQX1` are not MARKS.
-  **Exception — "ENTER ตามหน้า BL" (user, 2026-11-27):** when the page (text or the customer's FreeText) says
-  `ตามหน้า B/L` / `ตามหน้าBL` / `ตามหน้าเอกสาร` / `AS PER B/L`, the customer declared the whole B/L page → markings are
-  ignored and every field is checked in full (note `ลูกค้าแจ้ง "ตามหน้าB/L" = ตรวจทุกช่องตามหน้า B/L`). Regression: 30
-  such pages in job-01…07, one result changed (a highlighted page that says ตามหน้าB/L now passes in full).
+  **Priority (user, 2026-11-27): (1) markings first** — if the cargo area has a red box / highlight / underline / pen
+  line, the marking rules apply even when the page says "ENTER ตามหน้า BL"; **(2) only without markings**, "ENTER
+  ตามหน้า BL" (`ตามหน้า B/L` / `ตามหน้าBL` / `ตามหน้าบีแอล` / `ตามหน้าเอกสาร` / `AS PER B/L`) = the whole B/L page is
+  declared, every field checked (note `ลูกค้าแจ้ง "…" = ตรวจทุกช่องตามหน้า B/L`). `rec['cargo_marked']` decides.
   **FLEXIBAG ≠ FLEXITANK** (ENTER `1 FLEXIBAG` vs MF `1 FE (FLEXITANK(s))` = PACKAGING red; the earlier FLEXI→TANK
   mapping was wrong). Regression: 10 B/Ls changed in job-01…07, all by these rules (marked text shorter than MF,
   MEAS. marked ≠ MF 0.000, unmarked MEAS. vs MF value, FLEXIBAG).

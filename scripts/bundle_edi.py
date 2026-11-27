@@ -524,6 +524,7 @@ def parse_blform(lines, annots, page, gap_cut=False, boxes=None, words=None):
     _in = {k for k, l in _num.items() if l is not None and (box_of(l) or _ovl(l))}
     cargo_marked = bool(_in or bd or bm)
     if cargo_marked:
+        rec['cargo_marked'] = True
         rec['skip_fields'] = [k for k in _num if k not in _in and rec.get(k) is not None]
     # ผู้ใช้ 2026-11-27: "MARKS อยู่นอกกรอบ / ไม่ขีดเส้นใต้ / ไม่ป้ายสี ถือว่าลูกค้าไม่ได้แจ้ง ขึ้นเตือนด้วย" — ลูกค้าทำ
     # เครื่องหมายในช่องสินค้าแล้วแต่ไม่ได้ทำที่ MARKS → MARKS ไม่ได้แจ้ง (MF ต้องไม่มี MARKS)
@@ -1522,15 +1523,16 @@ def parse_enter_bundle(path, bl_re, man_bls=()):
             table_doc = None
         if kind == 'BLFORM':
             _pg = doc[p - 1]
-            # ผู้ใช้ 2026-11-27: ลูกค้าเขียน "ENTER ตามหน้า BL" = แจ้งทุกอย่างตามหน้า B/L → ตรวจทั้งหน้า (ไม่ใช้กฎเครื่องหมาย
-            # กรอบแดง / ป้ายสี / ขีดเส้นใต้ — ช่องที่ไม่ได้ทำเครื่องหมายก็ตรวจ)
+            # ผู้ใช้ 2026-11-27 ลำดับความสำคัญ: (1) มีกรอบแดง / ป้ายสี / ขีดเส้นใต้ในช่องสินค้า → ตรวจตามเครื่องหมายก่อนเสมอ
+            # (แม้จะเขียน "ENTER ตามหน้า BL") ; (2) ไม่มีเครื่องหมาย + "ENTER ตามหน้า BL" → แจ้งทุกอย่างตามหน้า ตรวจทุกช่อง
             _all = re.search(r'ตามหน้า\s*(?:B\s*/?\s*L|บี\s*แอล|เอกสาร)|AS\s*PER\s*(?:THE\s*)?(?:B\s*/\s*L|BILL\s*OF\s*LADING)\b',
                              ' '.join([l['t'] for l in ls] + [a['t'] for a in an]), re.I)
-            recs = parse_blform(ls, an, p, boxes=None if _all else mark_rects(_pg),
+            recs = parse_blform(ls, an, p, boxes=mark_rects(_pg),
                                 words=_pg.get_text('words') if page_rot(_pg) not in ((0, -1), (0, 1)) else None)
             if _all:
                 for _r in recs.values():
-                    _r['as_per_bl'] = _all.group(0)
+                    if not _r.get('cargo_marked'):
+                        _r['as_per_bl'] = _all.group(0)       # อันดับ 2: ไม่มีเครื่องหมายในช่องสินค้า
             if p in garbled:
                 for r in recs.values():
                     r['ocr'] = True               # ค่าจากชั้นข้อความ OCR ของสแกน — ขึ้นสีส้ม ตรวจด้วยตา
