@@ -25,8 +25,19 @@ The program is published at **https://github.com/Rattanao/Various-forms** (local
 branch `main`; guide page https://rattanao.github.io/Various-forms/ — live 2026-11-27; Pages serves `main` / root,
 so the page is the root `index.html` (+ `.nojekyll`); keep `docs/index.html` identical). It holds `SKILL.md`, `scripts/`, `README.md`,
 `run-check-edi.bat` (asks SHED, writes `output/EDI-<date-time>.xlsx`), `requirements.txt`, `.gitignore`
-(input/, output/, tests/, *.xls, *.xlsx, *.pdf never go up). There is no in-browser checker: Windows OCR +
-~4,000 lines of Python. **To update the repo after changing this skill:** copy `SKILL.md` + `scripts/*.py|ps1`
+(input/, output/, tests/, *.xls, *.xlsx, *.pdf never go up).
+
+**Online checker (the link to send to friends): https://rattanao.github.io/Various-forms/** (2026-11-27).
+`index.html` + `app/app.js` run the *same* `scripts/bundle_edi.py` + `build_edi.py` in the browser with Pyodide
+0.28.3 (`loadPackage(['pymupdf','xlrd','micropip'])` + `micropip.install('openpyxl')`); nothing is uploaded.
+Scanned pages: pass 1 runs with `bundle_edi.BROWSER_OCR = {}` and collects `OCR_WANTED` page numbers; the page
+renders each at 300 dpi gray (Python `_png`), OCRs it with Tesseract.js 5 (`blocks:true`), splits each Tesseract line
+at word gaps > 1.1 × line height and at lone `:`/`|` (Tesseract joins columns that Windows OCR keeps apart), maps
+`©`→0, then pass 2 runs with `BROWSER_OCR = Map{page: lines}` (number keys!). Test 2026-11-27 on job-05: text pages
+identical to the PC run, 16/16 B/Ls found; scan pages differ (Tesseract is weaker on some fields, better on others) —
+they stay orange. Big scan-heavy bundles are slow online; the PC version (Windows OCR) is the accurate one.
+`window.CheckVarious.run(mfFile, enterFile, {shed})` / `.boot()` / `.py()` are test hooks. Bump `app.js?v=` in
+`index.html` when app.js changes. `guide.html` (= `docs/index.html`) is the guide + ZIP download. **To update the repo after changing this skill:** copy `SKILL.md` + `scripts/*.py|ps1`
 into the clone, run the sanitizer (customer names used as examples → ABC/XYZ, real B/L digits → 0, real
 container digits → 0000000; regexes are untouched), check `ast.parse`, re-run one test job from the clone and
 compare with the skill's own output (must be 0 differences), then commit + push. Customer files never go up.
