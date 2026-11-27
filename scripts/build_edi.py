@@ -248,7 +248,7 @@ def compute_extra_checks(m, e):
         if 'LAEM CHABANG' in (m.get('port_discharge') or '').upper() \
                 and re.search(r'CLASS|UN\s*\d', m.get('dg') or '', re.I):
             ok = act == '2826'
-            out['shed'] = {'ok': ok, 'text': (raw.strip() or '(ว่าง)') + ('' if ok else '  (ต้องเป็น 2826 — DG LAEM CHABANG)'),
+            out['shed'] = {'ok': ok, 'text': '-' if ok else (raw.strip() or '(ว่าง)') + '  (ต้องเป็น 2826 — DG LAEM CHABANG)',
                            'note': None if ok else f"SHED NO. ไม่ตรง — DG ที่ DISCHARGE LAEM CHABANG ต้องเป็น 2826 "
                                                    f"(MANIFEST: {raw.strip() or '(ว่าง)'})"}
         else:
@@ -2820,7 +2820,7 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
             mk(21, True)
         if dg_ok and MF_ORDER:
             mk(22, True)
-            dg = dg_m if len(dg_m) >= len(dg_e) else dg_e
+            dg = '-'          # ผู้ใช้ 2026-11-27: ถูกต้องและตรงกัน = '-' (ไม่ตรง = เตือน)
         elif dg_e or dg_m:
             mk(22, False)
             TOT['dg'] += 1
