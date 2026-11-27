@@ -72,6 +72,11 @@ skill is the single home for all of them.
   data and is checked in full** (user confirmed 2026-11-27 with `HASLC…797_ตามหน้า BL .pdf` / `_CY.pdf`: MEAS. 55
   vs MF 0.000 stays red). A short FreeText ending in `CY` / `CY/CY` / `FCL` / `LCL` (≤ 30 characters) is the
   customer's STATUS (regression: 8 STATUS cells in job-02 / job-06 went from "(ไม่ระบุใน ENTER)" to CY, all = MF).
+  **MEAS. outside the box (2026-11-27, SWDN 1002364 "enter ไม่ได้ตีกรอบ แต่ M/F เป็น 60.000 MTQ มันผิดต้องแจ้งเตือน"):**
+  the customer did not declare MEAS., so the MF must be **0.000** — ENTER MEAS. is set to 0 and compared: MF 0.000 =
+  `-`, MF 60.000 = red; note `MEAS. ไม่อยู่ในกรอบแดงของลูกค้า = ไม่ได้แจ้ง → MF ต้องเป็น 0.000 (ENTER พิมพ์ 60.000)`.
+  TOTAL PKG / G.W. outside the box are still not checked (MF value used). Regression: only SWDN 1002364 (MF 60) and
+  1002539 (MF 40) turned red; every other unboxed MEAS. in job-01…07 has MF 0.000.
   `red_boxes()` now also finds red boxes drawn as plain red lines in the page (`get_drawings`, no fill,
   > 25×10 pt), not only Square annotations. Regression: 50 B/Ls in job-01…07 changed, all by this rule (mostly
   MF MEAS. 0.000 with an unboxed ENTER MEAS. → pass); no new mismatch.

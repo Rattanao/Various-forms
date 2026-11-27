@@ -2098,7 +2098,12 @@ def apply_bundle_rules(MAN, ENT):
                 'meas': lambda: be.num(m.get('meas'))}
         for k in e.pop('skip_fields', None) or []:
             v = _mfv[k]()
-            if v is not None:
+            if k == 'meas':
+                # ผู้ใช้ 2026-11-27 (SWDN 1002364): MEAS. นอกกรอบ = ลูกค้าไม่แจ้ง MEAS. → MF ต้องเป็น 0.000 ;
+                # MF มีค่า (60.000) = ผิด ต้องเตือน (ENTER = 0 เทียบกับ MF)
+                e.setdefault('unboxed', {})[k] = e.get(k)
+                e[k] = 0.0
+            elif v is not None:
                 e.setdefault('unboxed', {})[k] = e.get(k)
                 e[k] = v
         # ARRIVAL NOTICE/สำเนา B/L ของ Heung-A เอง: MANIFEST ตัดข้อความ B/L บางส่วนออก (HS CODE, ที่อยู่ '*…',
@@ -2230,7 +2235,11 @@ def annotate_report(outpath, MAN, ENT, info):
                         prefix += f"{lbl} ตรวจเฉพาะในกรอบแดงของลูกค้า: {ENT[bl][k + '_inbox']} ; "
             _lb = {'pkgs': 'TOTAL PKG', 'gw': 'G.W.', 'meas': 'MEAS.'}
             for k, v in (ENT[bl].get('unboxed') or {}).items():
-                prefix += f"{_lb[k]} ไม่อยู่ในกรอบแดงของลูกค้า = ไม่ได้แจ้ง ไม่ตรวจ (ENTER พิมพ์ {v:,.3f}) ; "
+                if k == 'meas':
+                    prefix += (f"MEAS. ไม่อยู่ในกรอบแดงของลูกค้า = ไม่ได้แจ้ง → MF ต้องเป็น 0.000 "
+                               f"(ENTER พิมพ์ {v:,.3f}) ; ")
+                else:
+                    prefix += f"{_lb[k]} ไม่อยู่ในกรอบแดงของลูกค้า = ไม่ได้แจ้ง ไม่ตรวจ (ENTER พิมพ์ {v:,.3f}) ; "
         elif bl in MAN and bl not in ENT:
             if bl in by_cont:
                 pg = by_cont[bl]
