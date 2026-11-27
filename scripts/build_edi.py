@@ -2709,6 +2709,10 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
         mk(7, st_ok); mk(8, st_ok)
         disp_e = (se_raw + (f'  (= {se})' if se and se_raw.strip() != se else '')) if se_raw else '(ไม่ระบุใน ENTER)'
         disp_m = (sm_raw + (f'  (= {sm})' if sm and sm_raw != sm else '')) if sm_raw else '(ว่าง)'
+        if MF_ORDER and se and sm and se == sm:   # ผู้ใช้ 2026-11-27: STATUS ตรงกัน (ลากตู้/CY = CY ฯลฯ) → '-' ทั้ง 2 ช่อง
+            disp_e = disp_m = '-'
+            if se_raw.strip() != se:              # คำของลูกค้า (ด่วน / HOT BOX / เร่งเปิดตู้) ยังเก็บไว้ในหมายเหตุ
+                notes.append(f"STATUS ตรง ({se}) — ENTER: {se_raw.strip()}")
         if not st_ok:
             TOT['st_bad'] += 1
             notes.append(f"STATUS ไม่ตรง (ENTER {se_raw} = {se} / MANIFEST {sm_raw} = {sm})")
