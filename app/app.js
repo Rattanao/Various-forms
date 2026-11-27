@@ -76,7 +76,7 @@ def _png(path, i):
     import pymupdf
     d = pymupdf.open(path)
     return d[i].get_pixmap(dpi=300, colorspace=pymupdf.csGRAY).tobytes('png')
-_FILL = {'FDD7D7': 'diff', 'FCE4D6': 'warn', 'FFF2CC': 'yel', 'C6EFCE': 'grn', '1F4E78': 'navy', '1F3864': 'navy'}
+_FILL = {'FDD7D7': 'diff', 'FCE4D6': 'warn', 'FFF2CC': 'yel', 'FFD966': 'yeldk', 'C6EFCE': 'grn', '1F4E78': 'navy', '1F3864': 'navy'}
 def _table(path):
     import openpyxl
     ws = openpyxl.load_workbook(path).active

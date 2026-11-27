@@ -2534,6 +2534,8 @@ f_grn = PatternFill('solid', start_color=GREEN, end_color=GREEN)    # ช่อ�
 f_red = PatternFill('solid', start_color=RED, end_color=RED)
 f_org = PatternFill('solid', start_color=ORANGE, end_color=ORANGE)
 f_yel = PatternFill('solid', start_color=YEL, end_color=YEL)
+# [bundle-enter-check] ผู้ใช้ 2026-11-27: ช่อง B/L NO. ที่ไม่มี ENTER = เหลืองเข้ม
+f_yel_dk = PatternFill('solid', start_color='FFD966', end_color='FFD966')
 f_hdr = PatternFill('solid', start_color=NAVY, end_color=NAVY)
 F_base = Font(name=FN, size=FS)
 F_hdr = Font(name=FN, size=FS, bold=True, color='FFFFFF')
@@ -2662,7 +2664,7 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
                 elif okx == 'review':
                     c.fill = f_org
                 elif not MF_ORDER or j == 2:
-                    c.fill = f_yel
+                    c.fill = f_yel_dk if MF_ORDER else f_yel
                 c.border = BORD
                 c.font = F_bad if (j in (1, 2, COL_NOTE) or okx in (False, 'review')) else F_base
                 c.alignment = Alignment(wrap_text=True, vertical='top',
@@ -3130,7 +3132,7 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
     c2.font = Font(name=FN, size=FS, bold=True, color='000000')      # แถว 2 = สีดำ
     c2.alignment = Alignment(wrap_text=True, vertical='center')
     c3 = ws.cell(3, 1, "สี: ขาว=ไม่ผิด | เขียว=ผ่าน (ช่องสรุป) | แดง ⚠=ไม่ตรง/จุดเร่งด่วน | ส้ม=ต้องยืนยัน | "
-                        + ("เหลือง (ช่อง B/L NO.)=ไม่มี ENTER เทียบ ; เรียงตาม MF" if MF_ORDER else "เหลือง=ไม่มี ENTER เทียบ") + "    ||    "
+                        + ("เหลืองเข้ม (ช่อง B/L NO.)=ไม่มี ENTER เทียบ ; เรียงตาม MF" if MF_ORDER else "เหลือง=ไม่มี ENTER เทียบ") + "    ||    "
                         "STATUS: CY,CY/CY,FCL,ลากตู้=CY ; LCL,ขน(ส่ง)=LCL ; CFS,LCL/CFS,เปิดตู้=LCL/CFS    ||    "
                         + ("SHED: ตรวจเฉพาะ DG ที่ DISCHARGE LAEM CHABANG = 2826 ; DG: CLASS/UN ตรงกันครบ = ไม่เตือน (ENTER ไม่ระบุ CLASS/UN = เตือน) ; REEFER: TEMP ตรงกัน = ไม่เตือน "
                            "แต่ MF ไม่มี VENT = เตือน    ||    " if not CHECK_SHED else

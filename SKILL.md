@@ -20,7 +20,7 @@ skill is the single home for all of them.
   - **SHED is not checked**: the SHED column just shows the MF value (no colour, no note, not counted);
     do not ask the user for a SHED.
   - **Every MF B/L is listed, in MF order** (split B/Ls `…A/…B` right after their main B/L).
-  - An MF B/L with no ENTER: **only its B/L NO. cell is yellow** (the rest of the row stays white; the whole
+  - An MF B/L with no ENTER: **only its B/L NO. cell is dark yellow `FFD966`** (user: "ขอเหลืองเข้ม", 2026-11-27; web class `yeldk`) (the rest of the row stays white; the whole
     row is orange only when its container points at an unreadable scan page). The TOTAL row's MF sums leave
     those B/Ls out, and its note says how many.
   - An ENTER B/L missing from MF is still a red critical row at the end.
