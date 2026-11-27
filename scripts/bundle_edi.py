@@ -1635,8 +1635,21 @@ _OCR_PKG_RE = re.compile(r'\b(\d[\d,]*)\s+(CASES?|CARTONS?|CTNS?|PALLETS?|PLTS?|
                          r'ROLLS?|PIECES?|PCS|SETS?|BOX(?:ES)?|BUNDLES?|UNITS?)\b', re.I)
 
 
+# หน้าเว็บ (Pyodide ในเบราว์เซอร์): ไม่มี OCR ของ Windows — รอบแรกจด "หน้าที่ต้อง OCR" ไว้ใน OCR_WANTED,
+# หน้าเว็บ OCR ด้วย Tesseract.js แล้วใส่ผลใน BROWSER_OCR {เลขหน้า 0-based: [{x,y,x1,y1,t} พิกเซลที่ 300 dpi]} แล้วรันรอบสอง
+BROWSER_OCR = None
+OCR_WANTED = set()
+
+
 def ocr_page(pg, dpi=300):
     """คืนบรรทัด OCR แบบเดียวกับ page_lines (พิกัด pt) — ไม่มี OCR (ไม่ใช่ Windows) คืน []"""
+    if BROWSER_OCR is not None:
+        raw = BROWSER_OCR.get(pg.number)
+        if raw is None:
+            OCR_WANTED.add(pg.number)
+            return []
+        k = 72 / dpi
+        return [{'x': l['x'] * k, 'y': l['y'] * k, 'x1': l['x1'] * k, 't': l['t']} for l in raw if l.get('t')]
     if os.name != 'nt' or not os.path.exists(OCR_PS):
         return []
     import json

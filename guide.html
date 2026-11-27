@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check EDI Various Forms</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2433; --mute:#5b6475; --line:#e3e6ec; --accent:#1f5fbf; --red:#d93a3a; --org:#e8892b; --yel:#e9c43b; --grn:#2e9a5a; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171c; --card:#1c2027; --ink:#e7eaf0; --mute:#a2aab8; --line:#2c323c; --accent:#6aa3ff; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 "Sarabun","Segoe UI",system-ui,sans-serif; }
+  main { max-width: 880px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  .sub { color: var(--mute); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; margin: 0 0 16px; }
+  h2 { font-size: 1.15rem; margin: 0 0 10px; }
+  ol, ul { margin: 0; padding-left: 1.3em; }
+  li { margin: 4px 0; }
+  .btn { display:inline-block; background: var(--accent); color:#fff; text-decoration:none; padding:10px 18px; border-radius:8px; font-weight:600; margin: 6px 8px 0 0; }
+  .btn.alt { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  code { background: rgba(127,127,127,.15); padding: 1px 6px; border-radius: 4px; font-size: .92em; }
+  .sw { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:6px; }
+  .note { color: var(--mute); font-size: .93rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Check EDI — ENTER ชุดรวมหลายฟอร์ม</h1>
+  <p class="sub">เทียบ MF (MANIFEST) กับ ENTER ที่เป็น PDF ไฟล์เดียวรวมหลายฟอร์ม → รายงาน EDI.xlsx แบบใส่สี</p>
+
+  <div class="card">
+    <h2>ดาวน์โหลด</h2>
+    <a class="btn" href="./">ตรวจออนไลน์ (ไม่ต้องติดตั้ง)</a>
+    <a class="btn alt" href="https://github.com/Rattanao/Various-forms/archive/refs/heads/main.zip">ดาวน์โหลดโปรแกรม (ZIP)</a>
+    <a class="btn alt" href="https://github.com/Rattanao/Various-forms">ดูใน GitHub</a>
+    <p class="note">ตรวจออนไลน์: ประมวลผลในเบราว์เซอร์เท่านั้น ไม่อัปโหลดไฟล์ · เวอร์ชันติดตั้งรันบน Windows 10/11 ใช้ OCR ของ Windows อ่านหน้าสแกนได้แม่นกว่า</p>
+  </div>
+
+  <div class="card">
+    <h2>ติดตั้งครั้งแรก</h2>
+    <ol>
+      <li>ติดตั้ง Python 3.10+ จาก <a href="https://www.python.org/downloads/">python.org</a> — ติ๊ก <b>Add python.exe to PATH</b></li>
+      <li>แตกไฟล์ ZIP ไว้ที่ไหนก็ได้</li>
+      <li>ครั้งแรกที่รัน โปรแกรมติดตั้งไลบรารีที่ต้องใช้ให้เอง</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>ใช้งาน</h2>
+    <ol>
+      <li>วาง MF (<code>.xls</code> / <code>.xlsx</code> / <code>.pdf</code>) และ ENTER (<code>.pdf</code>) ในโฟลเดอร์ <code>input</code></li>
+      <li>ดับเบิลคลิก <code>run-check-edi.bat</code></li>
+      <li>ใส่ SHED NO. เลขเดียวทุก B/L (เช่น <code>0141</code>) หรือแยก LCL/CFS กับ CY (เช่น <code>0141</code> / <code>0121</code>)</li>
+      <li>รายงานอยู่ที่ <code>output\EDI-&lt;วันเวลา&gt;.xlsx</code></li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>อ่านรายงาน</h2>
+    <ul>
+      <li><span class="sw" style="background:var(--red)"></span>แดง = ไม่ตรง</li>
+      <li><span class="sw" style="background:var(--org)"></span>ส้ม = ต้องให้คนตรวจยืนยัน (รวมหน้าที่อ่านด้วย OCR)</li>
+      <li><span class="sw" style="background:var(--yel)"></span>เหลือง = ไม่มี ENTER ให้เทียบ</li>
+      <li><span class="sw" style="background:var(--grn)"></span>เขียว = ผ่าน</li>
+    </ul>
+    <p class="note">ลงผลเฉพาะ B/L ที่มีใน ENTER · หมายเหตุบอกหน้า ENTER ที่อ่าน <code>[ENTER หน้า n]</code> · B/L แตกเรียงต่อกัน</p>
+  </div>
+
+  <div class="card">
+    <h2>ฟอร์มที่อ่านได้</h2>
+    <p>ARRIVAL NOTICE / สำเนา B/L + ATTACHED RIDER, หน้าสแกน (OCR), จดหมายแก้ไขของ forwarder หลายสิบแบบ
+      (ตาราง AMENDMENT, LEO GLOBAL, KUEHNE + NAGEL, GENIUS, SHIP MASTER, MAXTOP, NIPPON, SINTOP ฯลฯ)
+      และฟอร์มของ forwarder ที่มีตัวอ่านเฉพาะ (Sinotrans, LX Pantos, Freight Links, Shipco, Planet, Union World,
+      AGN, Handle Inter, Able, Quality, MAC-NELS, CMS / M INTER, DSV)</p>
+    <p class="note">รายการเต็มและวิธีอ่านแต่ละฟอร์ม: <a href="https://github.com/Rattanao/Various-forms/blob/main/SKILL.md">SKILL.md → Form registry</a></p>
+  </div>
+</main>
+</body>
+</html>
