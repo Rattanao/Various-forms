@@ -132,6 +132,11 @@ def find_dest_country(txt):
 # SHED NO. ที่ผู้ใช้แจ้งมาตอนสั่งตรวจ (--shed เช่น 0141) — ถ้ามีค่า ทุก B/L ต้องตรงกับเลขนี้ ยกเว้น LAOS
 # ที่ยังใช้กฎเดิม (0124 เมื่อ DISCHARGE BANGKOK). ถ้าไม่แจ้ง ใช้กฎ 7 หมวดเดิมทั้งหมด
 EXPECTED_SHED = ''
+# [bundle-enter-check] ผู้ใช้ 2026-11-27: ENTER ชุดรวม (แยกละฟอร์ม) ไม่ตรวจ SHED — ช่อง SHED แสดงค่าใน MF เฉย ๆ
+CHECK_SHED = True
+# [bundle-enter-check] เรียงแถวตามลำดับใน MF (B/L แตก …A/…B ต่อท้าย B/L หลักเสมอ) และ B/L ที่ไม่มี ENTER
+# ใส่สีเหลืองเฉพาะช่อง B/L NO. ; ยอดรวม MF ในแถว TOTAL ไม่รวม B/L ที่ไม่มี ENTER
+MF_ORDER = False
 
 
 def check_shed(port_discharge, has_dg, has_used_engine, dest_country, shed_raw):
@@ -234,7 +239,9 @@ def compute_extra_checks(m, e):
     ok, exp, lbl = check_shed(m.get('port_discharge', ''), bool(m['dg']), has_used_engine, dest_country,
                                m.get('shed_no', ''))
     raw = m.get('shed_no') or ''
-    if ok is None:
+    if not CHECK_SHED:
+        out['shed'] = {'ok': None, 'text': raw.strip() or '-', 'note': None}
+    elif ok is None:
         out['shed'] = {'ok': None, 'text': '-', 'note': None}
     elif ok and lbl == 'SHED ที่แจ้ง':
         out['shed'] = {'ok': True, 'text': '-', 'note': None}   # ตรงกับที่แจ้ง → '-'
@@ -2593,6 +2600,13 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
     # [bundle-enter-check] B/L แตก (split) ต้องเรียงต่อกัน: HASLS00000000000 แล้วตามด้วย …664A–L ทันที
     # (เดิมเรียงตามความยาวก่อน ทำให้ B/L ย่อยไปกองท้ายรายงาน — ผู้ใช้แจ้ง 2026-11-25)
     sub = sorted(MAN)
+    if MF_ORDER:
+        _ix = {b: i for i, b in enumerate(MAN)}
+        def _key(b):
+            base = next((b[:k] for k in range(len(b) - 1, len(b) - 3, -1)
+                         if b[:k] in _ix and re.fullmatch(r'[A-Z]{1,2}', b[k:])), None)
+            return (_ix[base], 1, _ix[b]) if base else (_ix[b], 0, 0)
+        sub = sorted(MAN, key=_key)
 
     for bl in sub:
         m = MAN[bl]
@@ -2633,15 +2647,18 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
                     c.fill = f_red
                 elif okx == 'review':
                     c.fill = f_org
-                else:
+                elif not MF_ORDER or j == 2:
                     c.fill = f_yel
                 c.border = BORD
                 c.font = F_bad if (j in (1, 2, COL_NOTE) or okx in (False, 'review')) else F_base
                 c.alignment = Alignment(wrap_text=True, vertical='top',
                                          horizontal=('right' if j in NUMCOL else 'left'))
-            if _pm: TOT['pm'] += _pm
-            if _gm: TOT['gm'] += _gm
-            if _mm: TOT['mm'] += _mm
+            if not MF_ORDER:
+                if _pm: TOT['pm'] += _pm
+                if _gm: TOT['gm'] += _gm
+                if _mm: TOT['mm'] += _mm
+            else:
+                TOT['no_ent'] = TOT.get('no_ent', 0) + 1
             r += 1
             issue_rows += 1
             crit.append(f'{bl}: ไม่มีเอกสาร ENTER')
@@ -2999,10 +3016,11 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
             f"{TOT['me']:,.3f}", f"{TOT['mm']:,.3f}",
             '', '', '', '',
             f"{TOT['reefer']} B/L", f"{TOT['dg']} B/L", f"{TOT['transit']} B/L",
-            f"SHED ไม่ตรง {TOT['shed_bad']} B/L", f"ปลายทางไม่ตรง {TOT['dest_bad']} B/L",
+            f"SHED ไม่ตรง {TOT['shed_bad']} B/L" if CHECK_SHED else 'SHED: ไม่ตรวจ', f"ปลายทางไม่ตรง {TOT['dest_bad']} B/L",
             f"MOVEMENT ไม่ตรง {TOT['mv_bad']} / ต้องตรวจ {TOT['mv_review']} B/L",
             f"TAX ID ไม่ตรง {TOT['tax_bad']} B/L",
-            (decl_txt + f"ตรวจยอดรวมจากรายการข้างบน: PACKAGE {'ตรง' if pe_ok else 'ไม่ตรง'}, "
+            (decl_txt + (f"ยอด MF ไม่รวม {TOT['no_ent']} B/L ที่ไม่มี ENTER (ช่อง B/L สีเหลือง) ; " if TOT.get('no_ent') else '')
+             + f"ตรวจยอดรวมจากรายการข้างบน: PACKAGE {'ตรง' if pe_ok else 'ไม่ตรง'}, "
                         f"GROSS WEIGHT {'ตรง' if ge_ok else 'ไม่ตรง'}, MEASUREMENT {'ตรง' if me_ok else 'ไม่ตรง'}")]
     trow = _reorder(trow)
     topb = Border(left=thin, right=thin, bottom=thin, top=Side(style='medium', color=NAVY))
@@ -3045,9 +3063,10 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
     c2.font = Font(name=FN, size=FS, bold=True, color='000000')      # แถว 2 = สีดำ
     c2.alignment = Alignment(wrap_text=True, vertical='center')
     c3 = ws.cell(3, 1, "สี: ขาว=ไม่ผิด | เขียว=ผ่าน (ช่องสรุป) | แดง ⚠=ไม่ตรง/จุดเร่งด่วน | ส้ม=ต้องยืนยัน | "
-                        "เหลือง=ไม่มี ENTER เทียบ    ||    "
+                        + ("เหลือง (ช่อง B/L NO.)=ไม่มี ENTER เทียบ ; เรียงตาม MF" if MF_ORDER else "เหลือง=ไม่มี ENTER เทียบ") + "    ||    "
                         "STATUS: CY,CY/CY,FCL,ลากตู้=CY ; LCL,ขน(ส่ง)=LCL ; CFS,LCL/CFS,เปิดตู้=LCL/CFS    ||    "
-                        + (f"SHED NO.: ต้องเป็น {EXPECTED_SHED} ทุก B/L (ตรง = -) ยกเว้น LAOS=0124 "
+                        + ("SHED NO.: ไม่ตรวจ (แสดงค่าใน MF)    ||    " if not CHECK_SHED else
+                           f"SHED NO.: ต้องเป็น {EXPECTED_SHED} ทุก B/L (ตรง = -) ยกเว้น LAOS=0124 "
                            "(DISCHARGE BANGKOK)    ||    " if EXPECTED_SHED else
                            "SHED NO.: USED ENGINE/LAOS=0126/0124 (เฉพาะ DISCHARGE BANGKOK), DG=2826 (เฉพาะ LAEM "
                            "CHABANG), THLKR/BMT/SCT/UNITHAI=0332/0110/0302/0113    ||    ") +

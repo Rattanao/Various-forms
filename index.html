@@ -88,7 +88,7 @@
 </style>
 </head>
 <body>
-<header><div class="wrap"><span class="logo"><img src="app/hal-logo.png" alt="Heung A Line Co., Ltd." width="224" height="55"></span><h1>CHECK EDI VARIOUS FORMS</h1><p>ตรวจเทียบ MANIFEST กับ ENTER ชุดรวมหลายฟอร์ม (PDF ไฟล์เดียว): CONSIGNEE · CNTR · STATUS · PKG · G.W. · MEAS. · MARKS · DESC · DG · REEFER · TRANSIT · SHED</p><div class="by">Project by Ms. Rattana Mudlae<br>Position Import DOC.</div></div></header>
+<header><div class="wrap"><span class="logo"><img src="app/hal-logo.png" alt="Heung A Line Co., Ltd." width="224" height="55"></span><h1>CHECK EDI VARIOUS FORMS</h1><p>ตรวจเทียบ MANIFEST กับ ENTER ชุดรวมหลายฟอร์ม (PDF ไฟล์เดียว): CONSIGNEE · CNTR · STATUS · PKG · G.W. · MEAS. · MARKS · DESC · DG · REEFER · TRANSIT</p><div class="by">Project by Ms. Rattana Mudlae<br>Position Import DOC.</div></div></header>
 
 <main class="wrap">
   <section class="card">
@@ -98,14 +98,6 @@
         <div class="drop" id="drop"><span>ลากไฟล์มาวางพร้อมกัน หรือ <b>คลิกเพื่อเลือกไฟล์</b></span></div>
         <input type="file" id="file" accept=".xls,.xlsx,.pdf" multiple class="hidden">
         <div class="files" id="files"></div>
-        <div class="opt">
-          <label><input type="radio" name="shedmode" value="one" checked> SHED NO. เลขเดียว:</label>
-          <input type="text" id="shed" placeholder="เช่น 0141" inputmode="numeric">
-          <label><input type="radio" name="shedmode" value="split"> แยกตาม STATUS — LCL/CFS:</label>
-          <input type="text" id="shedLcl" placeholder="0141" inputmode="numeric">
-          <span>CY:</span><input type="text" id="shedCy" placeholder="0121" inputmode="numeric">
-          <span>— ทุก B/L ต้องตรงเลขนี้ ยกเว้น LAOS</span>
-        </div>
       </div>
       <button id="run" disabled>ตรวจสอบ</button>
     </div>
@@ -114,7 +106,7 @@
       แยก ENTER ทีละหน้า แล้วอ่านด้วยตัวอ่านของแต่ละฟอร์ม (ARRIVAL NOTICE, จดหมายแก้ไขของ forwarder หลายสิบแบบ, Sinotrans / LX Pantos / Shipco / Planet / Union World / AGN / Handle / Able / Quality / MAC-NELS / CMS / M INTER / DSV / LEO GLOBAL / KUEHNE + NAGEL ฯลฯ) ·
       <b>STATUS</b>: CY/CY-CY/FCL/ลากตู้ = <code>CY</code>, LCL/ขน = <code>LCL</code>, CFS/LCL-CFS/เปิดตู้ = <code>LCL/CFS</code> ·
       <b>WOODEN CASE ≠ CASE</b> · ก่อน <b>AS PER ATTACHED SHEET</b> ตรวจ 30 ตัวอักษรแรก · กรอบสีแดงของลูกค้า = ตรวจเฉพาะในกรอบ ·
-      <b>DG / REEFER / TRANSIT</b> พบฝั่งใดก็เตือนเสมอ · แสดงผลเฉพาะ B/L ที่มีใน ENTER · <b>B/L ที่มีใน ENTER แต่ไม่มีใน MANIFEST</b> = วิกฤต ·
+      <b>DG / REEFER / TRANSIT</b> พบฝั่งใดก็เตือนเสมอ · ไม่ตรวจ SHED (ช่อง SHED แสดงค่าใน MF) · แสดงทุก B/L ของ MF เรียงตาม MF — <b>ไม่มี ENTER = ช่อง B/L NO. สีเหลือง</b> · <b>B/L ที่มีใน ENTER แต่ไม่มีใน MANIFEST</b> = วิกฤต ·
       หน้าที่เป็นภาพสแกนอ่านด้วย OCR = สีส้ม ตรวจด้วยตา<br>
       ไฟล์ถูกประมวลผลในเบราว์เซอร์ของคุณเท่านั้น ไม่มีการอัปโหลดไปที่ใด · ครั้งแรกต้องโหลดตัวประมวลผล (~40 MB) ใช้เวลาสักครู่
     </p>
@@ -139,6 +131,6 @@
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
-<script src="app/app.js?v=20261127b"></script>
+<script src="app/app.js?v=20261127c"></script>
 </body>
 </html>

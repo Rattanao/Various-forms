@@ -41,15 +41,7 @@
     if (pct !== undefined) $('bar').style.width = Math.max(0, Math.min(100, pct)) + '%';
   };
 
-  const shedArgs = () => {
-    const four = (v) => { const m = (v || '').match(/\d{3,4}/); return m ? m[0].padStart(4, '0') : ''; };
-    const mode = document.querySelector('input[name=shedmode]:checked').value;
-    if (mode === 'one') { const s = four($('shed').value); return s ? ['--shed', s] : []; }
-    const a = four($('shedLcl').value), b = four($('shedCy').value);
-    return (a || b) ? ['--shed-lcl', a, '--shed-other', b] : [];
-  };
-  ['shedLcl', 'shedCy'].forEach((id) => $(id).addEventListener('input', () => { document.querySelector('input[value=split]').checked = true; }));
-  $('shed').addEventListener('input', () => { document.querySelector('input[value=one]').checked = true; });
+  // ไม่ตรวจ SHED แล้ว (ผู้ใช้ 2026-11-27) — ไม่มีช่องใส่ SHED
 
   // ---------- ตัวประมวลผล ----------
   async function boot() {
@@ -150,7 +142,7 @@ def _table(path):
       py.FS.writeFile('/work/input/' + mfName, new Uint8Array(await mf.file.arrayBuffer()));
       py.FS.writeFile('/work/input/ENTER.pdf', new Uint8Array(await en.file.arrayBuffer()));
       const argv = ['--manifest', '/work/input/' + mfName, '--enter', '/work/input/ENTER.pdf',
-                    '--outdir', '/work/output', '--name', 'EDI.xlsx', ...shedArgs()];
+                    '--outdir', '/work/output', '--name', 'EDI.xlsx'];
       const run = py.globals.get('_run'), png = py.globals.get('_png'), B = py.pyimport('bundle_edi');
 
       // รอบ 1: แยกชนิดหน้า อ่านทุกฟอร์ม และจดหน้าที่ต้อง OCR
@@ -259,14 +251,13 @@ def _table(path):
   $('onlyBad').onchange = () => table && drawRows();
   $('download').onclick = download;
 
-  // ใช้ทดสอบอัตโนมัติ: window.CheckVarious.run(mfFile, enterFile, {shed:'0141'})
+  // ใช้ทดสอบอัตโนมัติ: window.CheckVarious.run(mfFile, enterFile)
   window.CheckVarious = {
     py: () => py,
     boot: () => boot(),
     async run(mf, en, opt = {}) {
       files = [{ name: mf.name, size: mf.size, kind: 'MANIFEST', file: mf }, { name: en.name, size: en.size, kind: 'ENTER', file: en }];
       renderFiles();
-      if (opt.shed) $('shed').value = opt.shed;
       await check(); return { ok: !!reportBytes, log: $('log').textContent, table };
     },
   };

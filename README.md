@@ -10,11 +10,11 @@
 - TOTAL PACKAGE + ชนิดหีบห่อ (WOODEN CASE ≠ CASE), GROSS WEIGHT, MEASUREMENT (แจ้ง MF = 0.000)
 - MARKS, DESCRIPTION (ก่อน `AS PER ATTACHED SHEET` ตรวจ 30 ตัวอักษรแรก ; กรอบสีแดงของลูกค้า = ตรวจเฉพาะในกรอบ)
 - REEFER TEMP, DG (CLASS/UN), TRANSIT
-- SHED NO. (ทุก B/L ต้องตรงเลขที่แจ้ง ยกเว้น LAOS 0124 หรือแยก LCL/CFS กับ CY), ประเทศปลายทาง (ลาว = LA), CARGO MOVEMENT
-- ลงผล **เฉพาะ B/L ที่มีใน ENTER** — B/L ที่มีใน ENTER แต่ไม่มีใน MF ขึ้นแถววิกฤต
+- ไม่ตรวจ SHED NO. (ช่อง SHED แสดงค่าใน MF) ; ตรวจประเทศปลายทาง (ลาว = LA), CARGO MOVEMENT
+- แสดง **ทุก B/L ของ MF เรียงตามลำดับใน MF** — B/L ที่ไม่มี ENTER = **ช่อง B/L NO. สีเหลือง** ; B/L ที่มีใน ENTER แต่ไม่มีใน MF ขึ้นแถววิกฤต
 - B/L แตก (เช่น …664, …664A–L) เรียงต่อกัน ; หมายเหตุทุกแถวบอกหน้า ENTER `[ENTER หน้า n]`
 
-**สี:** 🟥 แดง = ไม่ตรง · 🟧 ส้ม = ต้องให้คนตรวจยืนยัน (รวมหน้าที่อ่านด้วย OCR) · 🟨 เหลือง = ไม่มี ENTER ให้เทียบ · 🟩 เขียว = ผ่าน
+**สี:** 🟥 แดง = ไม่ตรง · 🟧 ส้ม = ต้องให้คนตรวจยืนยัน (รวมหน้าที่อ่านด้วย OCR) · 🟨 เหลือง (ช่อง B/L NO.) = ไม่มี ENTER ให้เทียบ · 🟩 เขียว = ผ่าน
 
 ฟอร์มที่อ่านได้ทั้งหมด (และวิธีอ่าน) อยู่ใน [`SKILL.md`](SKILL.md) หัวข้อ **Form registry**
 
@@ -24,7 +24,7 @@
 
 ## ใช้ออนไลน์ (ส่งลิงก์ให้เพื่อนได้ ไม่ต้องติดตั้ง)
 
-เปิด **<https://rattanao.github.io/Various-forms/>** → ลากไฟล์ MF + ENTER ใส่ → ใส่ SHED NO. → กด **ตรวจสอบ** → กด **ดาวน์โหลด EDI.xlsx**
+เปิด **<https://rattanao.github.io/Various-forms/>** → ลากไฟล์ MF + ENTER ใส่ → กด **ตรวจสอบ** → กด **ดาวน์โหลด EDI.xlsx**
 
 - ไฟล์ถูกประมวลผลในเบราว์เซอร์ของผู้ใช้เท่านั้น ไม่อัปโหลดไปที่ใด (ใช้ Pyodide รันโปรแกรม Python ชุดเดียวกับในเครื่อง)
 - ครั้งแรกเบราว์เซอร์โหลดตัวประมวลผล ~40 MB · ใช้ Chrome / Edge รุ่นใหม่
@@ -46,17 +46,15 @@
 
 1. วางไฟล์ **MF** (`.xls` / `.xlsx` / MF `.pdf`) และ **ENTER** (`.pdf`) ในโฟลเดอร์ `input`
 2. ดับเบิลคลิก **`run-check-edi.bat`**
-3. ใส่ SHED NO. — เลขเดียวทุก B/L (เช่น `0141`) หรือเว้นว่างแล้วใส่แยก LCL/CFS กับ CY (เช่น `0141` / `0121`)
-4. รายงานอยู่ที่ `output\EDI-<วันเวลา>.xlsx` (ไม่เขียนทับไฟล์เดิม)
+3. รายงานอยู่ที่ `output\EDI-<วันเวลา>.xlsx` (ไม่เขียนทับไฟล์เดิม)
 
 ใช้ผ่าน Command Prompt:
 
 ```
-python scripts\bundle_edi.py --shed 0141 --name EDI.xlsx
-python scripts\bundle_edi.py --shed-lcl 0141 --shed-other 0121 --name EDI.xlsx
+python scripts\bundle_edi.py --name EDI.xlsx
 ```
 
-ตัวเลือก: `--manifest` / `--enter` ระบุไฟล์เอง · `--all-mf` แสดงทุก B/L ของ MF · `--outdir` โฟลเดอร์ผลลัพธ์
+ตัวเลือก: `--manifest` / `--enter` ระบุไฟล์เอง · `--enter-only` แสดงเฉพาะ B/L ที่มีใน ENTER (แบบเดิม) · `--outdir` โฟลเดอร์ผลลัพธ์
 
 ## ใช้กับ Claude Code (skill)
 

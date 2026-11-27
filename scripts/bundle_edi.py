@@ -2197,8 +2197,11 @@ def annotate_report(outpath, MAN, ENT, info):
                 msg = ''
             if msg:
                 prefix = f'[{msg}] '
-                for c in range(1, c_note + 1):
-                    ws.cell(r, c).fill = f_org
+                # ผู้ใช้ 2026-11-27: B/L ที่ไม่มี ENTER = เหลืองเฉพาะช่อง B/L NO. ; ส้มทั้งแถวเฉพาะเมื่อเลขตู้ชี้ไปที่หน้าสแกน
+                if bl in by_cont:
+                    for c in range(1, c_note + 1):
+                        if c != 2:
+                            ws.cell(r, c).fill = f_org
                 s = ws.cell(r, c_sum)
                 s.value = f"⚠ ENTER เป็นภาพสแกน — ตรวจด้วยตา" if bl in by_cont else s.value
         if prefix:
@@ -2237,12 +2240,22 @@ def main(argv=None):
     ap.add_argument('--shed-lcl', default='', help='SHED ของ B/L ที่ STATUS เป็น CFS/LCL เช่น 0141')
     ap.add_argument('--shed-other', default='', help='SHED ของ B/L ที่เหลือ (CY) เช่น 0122')
     ap.add_argument('--name', default='EDI.xlsx', help='ชื่อไฟล์รายงาน (ค่าเริ่มต้น EDI.xlsx)')
-    ap.add_argument('--all-mf', action='store_true', help='แสดงทุก B/L ของ MF (ค่าเริ่มต้น: เฉพาะ B/L ที่มีใน ENTER)')
+    ap.add_argument('--all-mf', action='store_true', help='(ค่าเริ่มต้นอยู่แล้ว) แสดงทุก B/L ของ MF ตามลำดับใน MF')
+    ap.add_argument('--enter-only', action='store_true', help='แบบเดิม: ลงผลเฉพาะ B/L ที่มีใน ENTER')
+    ap.add_argument('--check-shed', action='store_true', help='แบบเดิม: ตรวจ SHED กับ --shed / กฎ SHED ของ MF')
     a = ap.parse_args(argv)
+    # ผู้ใช้ 2026-11-27: "การตรวจ m/f แยกละฟอร์ม เราจะไม่ตรวจจับ SHED และหาก BL ไหนไม่มี ENTER ให้ใส่สีเหลืองช่อง
+    # B/L NO. เรียงลำดับตาม m/f" → ค่าเริ่มต้น: ไม่ตรวจ SHED, แสดงทุก B/L ของ MF ตามลำดับ MF, ไม่มี ENTER = B/L เหลือง
+    be.CHECK_SHED = a.check_shed
+    be.MF_ORDER = True
+    a.all_mf = not a.enter_only
     _s = lambda v: (lambda m: m.group(0).zfill(4) if m else '')(re.search(r'\d{3,4}', v or ''))
-    be.EXPECTED_SHED = _s(a.shed)
-    if _s(a.shed_lcl) or _s(a.shed_other):
-        use_shed_by_status(None, _s(a.shed_lcl), _s(a.shed_other))
+    if a.check_shed:
+        be.EXPECTED_SHED = _s(a.shed)
+        if _s(a.shed_lcl) or _s(a.shed_other):
+            use_shed_by_status(None, _s(a.shed_lcl), _s(a.shed_other))
+    elif a.shed or a.shed_lcl or a.shed_other:
+        print('(ไม่ตรวจ SHED แล้ว — ช่อง SHED แสดงค่าใน MF เฉย ๆ ; ใช้ --check-shed ถ้าต้องการตรวจแบบเดิม)')
 
     dirs = [os.path.join(a.indir, 'input'), a.indir]
     manifest = a.manifest or next((_find_one(['MANIFEST*.xls', 'MANIFEST*.xlsx', '*.xls', '*.xlsx'], d)
@@ -2298,13 +2311,13 @@ def main(argv=None):
     print(f'บันทึกแล้ว: {outpath}')
     print(f'B/L ทั้งหมด {stats["bl"]} | จุดต้องตรวจ {stats["issue_rows"]} แถว | STATUS ไม่ตรง {stats["st_bad"]} | '
           f'DG {stats["dg"]} | REEFER {stats["reefer"]} | TRANSIT {stats["transit"]}')
-    print(f'SHED NO. ไม่ตรง {stats["shed_bad"]} | ประเทศปลายทาง ไม่ตรง {stats["dest_bad"]} | '
+    print((f'SHED NO. ไม่ตรง {stats["shed_bad"]} | ' if be.CHECK_SHED else 'SHED NO. ไม่ตรวจ | ') + f'ประเทศปลายทาง ไม่ตรง {stats["dest_bad"]} | '
           f'CARGO MOVEMENT ไม่ตรง {stats["mv_bad"]} | TAX ID ไม่ตรง NOTIFY {stats["tax_bad"]}')
     for good, bad in typos:
         print(f'⚠️  เลข B/L ใน ENTER พิมพ์ผิด: {bad} → น่าจะเป็น {good} (เทียบค่ากับ {good} แล้ว)')
     missing = [b for b in MAN if b not in ENT]
     if missing:
-        print(f'⚠️  B/L ที่ไม่มีข้อความ ENTER ({len(missing)}): {", ".join(missing)}')
+        print(f'⚠️  B/L ของ MF ที่ไม่มี ENTER ({len(missing)}, ช่อง B/L สีเหลือง): {", ".join(missing)}')
     if mf_skipped:
         print(f'(ไม่ลงผล {len(mf_skipped)} B/L ของ MF ที่ไม่มีใน ENTER — ใช้ --all-mf ถ้าต้องการเห็นทั้งหมด)')
         if info['scans']:

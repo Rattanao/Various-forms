@@ -15,9 +15,16 @@ skill is the single home for all of them.
   its websites/repos). Fix and extend only this skill's `scripts/bundle_edi.py` (and its own
   `scripts/build_edi.py` copy).
 - Do not bring up the old job/website this skill started from; it was deleted on purpose (2026-11-06).
-- Global rules (CLAUDE.md), built in here: report **only B/Ls that are in ENTER** (an ENTER B/L missing
-  from MF is still a critical row); **WOODEN CASE ≠ CASE**; the user gives the SHED NO. every time —
-  every B/L must match it (match = `-`) except LAOS 0124; Laos = **(LA)**.
+- **User rule for this check (2026-11-27), overrides the global ENTER-only / SHED rules here:** "การตรวจ m/f
+  แยกละฟอร์ม เราจะไม่ตรวจจับ SHED และหาก BL ไหนไม่มี ENTER ให้ใส่สีเหลืองช่อง B/L NO. เรียงลำดับตาม m/f" →
+  - **SHED is not checked**: the SHED column just shows the MF value (no colour, no note, not counted);
+    do not ask the user for a SHED.
+  - **Every MF B/L is listed, in MF order** (split B/Ls `…A/…B` right after their main B/L).
+  - An MF B/L with no ENTER: **only its B/L NO. cell is yellow** (the rest of the row stays white; the whole
+    row is orange only when its container points at an unreadable scan page). The TOTAL row's MF sums leave
+    those B/Ls out, and its note says how many.
+  - An ENTER B/L missing from MF is still a red critical row at the end.
+- Other global rules still built in: **WOODEN CASE ≠ CASE**; Laos = **(LA)**.
 
 ## GitHub repo (2026-11-27)
 
@@ -66,14 +73,14 @@ Requirements: Python 3.10+, `pip install pymupdf openpyxl xlrd`. OCR needs Windo
 From the job folder (the one that contains `input/`):
 
 ```bash
-python ~/.claude/skills/bundle-enter-check/scripts/bundle_edi.py --shed 0141 --name EDI.xlsx
+python ~/.claude/skills/bundle-enter-check/scripts/bundle_edi.py --name EDI.xlsx
 ```
 
 - Finds `input/MANIFEST*.xls` (or MF PDF) and `input/ENTER*.pdf` automatically (or `--manifest` / `--enter`).
-- `--shed` = the SHED NO. the user gives for the job (ask if not given). `--shed-lcl X --shed-other Y` =
-  SHED by STATUS (CFS/LCL → X, the rest → Y), only when the user asks for that.
-- Only B/Ls in ENTER are reported; the console says how many MF B/Ls were skipped and warns when some
-  ENTER pages could not be read. `--all-mf` = list every MF B/L (old behaviour, only if the user asks).
+- No SHED check (user rule 2026-11-27). `--shed …` is accepted but ignored. Old behaviour only if the user
+  asks: `--check-shed --shed 0141` (or `--shed-lcl X --shed-other Y`).
+- Every MF B/L is listed in MF order; the console lists the MF B/Ls with no ENTER (yellow B/L cell).
+  `--enter-only` = old behaviour (only B/Ls in ENTER). `--all-mf` is still accepted (now the default).
 - Writes `output/<name>`; it never overwrites an existing report (pick a new `--name`). If Excel has the
   file open the save fails — use another name/outdir.
 
@@ -88,7 +95,7 @@ that B/L, MF values in the B/L's raw rows); "not found" should be 0. Values stat
 (sheet-top STATUS, header container) list that page too. Reads only an .xls MF. Values fixed on purpose
 (Thai font repair, OCR) do not trace literally — explain them.
 
-Relay to the user: DG / REEFER / STATUS first, then SHED, MEAS. 0.000 in MF, MARKS/DESC, then pages that
+Relay to the user: DG / REEFER / STATUS first, then MF B/Ls with no ENTER (yellow), MEAS. 0.000 in MF, MARKS/DESC, then pages that
 could not be read.
 
 ## How the bundle is read (page types)
@@ -248,7 +255,10 @@ python ~/.claude/skills/bundle-enter-check/scripts/run_tests.py --base <copy>/bu
 
 It runs every test job with `--all-mf --shed 0141` on both versions and lists every cell (value and fill)
 that changed; each difference must be explained by the change. Last run 2026-11-06: 0 differences on
-job-01 and job-02 (after the WOODEN CASE rule, which alone changed 5 cells in job-01). 2026-11-24 (OCR/DSV/TEMP
+job-01 and job-02 (after the WOODEN CASE rule, which alone changed 5 cells in job-01). 2026-11-27 (no SHED check,
+MF order, yellow B/L cell): compared per B/L, every difference in job-01…07 is the SHED cell / SHED note / SHED
+summary (so the summary now shows the `ต้องตรวจสอบ:` list it used to hide) or the no-ENTER row fills; MF order =
+the old order in all 7 jobs; forwarder test 138/138. A position compare now needs both sides in the same mode. 2026-11-24 (OCR/DSV/TEMP
 changes): 13 cells, all intended — DSV `SHIPMENT NO / COST CENTER` removed from DESC (job-01), MF `0'CVENT` read
 as 0°C (job-02), pages read by OCR no longer listed as unreadable; job-03 0. Forwarder test still 138/138.
 Later the same day (job-05 changes): job-02 page 8 scan now read by the BLFORM reader (consignee, MEAS, marks,
