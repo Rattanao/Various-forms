@@ -35,6 +35,13 @@ skill is the single home for all of them.
     is not wrong → `-` (note keeps `TRANSIT ตรงกันและถูกต้องตามกฎ (…)`); otherwise red as before.
   - SHED / ประเทศปลายทาง / CARGO MOVEMENT / TAX ID: correct = `-` (SHED is always `-`, not checked); real value
     only when wrong / to check — same as the other forwarder checks.
+- **User rule (2026-11-27, SWDN 1100797):** "enter ไม่ได้ใส่กรอบแสดงว่าไม่ใส่ข้อมูลนั้น ถ้าหากมีกรอบแสดงว่าเอาส่วนนั้น"
+  → on a Heung-A B/L page (BLFORM), when a red box covers one of the number cells (TOTAL PKG / G.W. / MEAS.),
+  the number cells **outside** any red box were not given by the customer: they are not checked (ENTER value
+  replaced by the MF value; note `MEAS. ไม่อยู่ในกรอบแดงของลูกค้า = ไม่ได้แจ้ง ไม่ตรวจ (ENTER พิมพ์ 55.000)`).
+  `red_boxes()` now also finds red boxes drawn as plain red lines in the page (`get_drawings`, no fill,
+  > 25×10 pt), not only Square annotations. Regression: 50 B/Ls in job-01…07 changed, all by this rule (mostly
+  MF MEAS. 0.000 with an unboxed ENTER MEAS. → pass); no new mismatch.
   - Regression 2026-11-27: only summary / REEFER / DG / TRANSIT / SHED / note cells changed in job-01…07;
     the warnings left are one-sided DG/TEMP, MF without VENT (job-01 x2, job-04 x1) and transit whose MF rule
     lines are missing (job-04).

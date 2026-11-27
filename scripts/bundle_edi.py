@@ -326,6 +326,19 @@ def red_boxes(pg):
         st = (a.colors or {}).get('stroke') or []
         if a.type[1] == 'Square' and len(st) >= 3 and st[0] > 0.7 and st[1] < 0.4 and st[2] < 0.4:
             out.append(a.rect if rot not in ((0, -1), (0, 1)) else pymupdf.Rect(_unrotate(pg, rot, *a.rect)))
+    # กรอบแดงที่ถูก "พิมพ์รวม" เป็นเส้นในหน้า (ไม่ใช่ annotation) — SWDN 2026-11-27 หน้า 21: เส้นแดงสี่เหลี่ยมไม่มีสีพื้น
+    try:
+        drs = pg.get_drawings()
+    except Exception:
+        drs = []
+    for dr in drs:
+        c = dr.get('color') or ()
+        r = dr.get('rect')
+        if len(c) >= 3 and c[0] > 0.7 and c[1] < 0.4 and c[2] < 0.4 and not dr.get('fill') and r is not None \
+                and r.width > 25 and r.height > 10 \
+                and {it[0] for it in dr.get('items') or []} <= {'re', 'l', 'qu'} \
+                and not any(abs(r.x0 - o.x0) < 2 and abs(r.y0 - o.y0) < 2 for o in out):
+            out.append(r if rot not in ((0, -1), (0, 1)) else pymupdf.Rect(_unrotate(pg, rot, *r)))
     return out
 
 
@@ -449,6 +462,12 @@ def parse_blform(lines, annots, page, gap_cut=False, boxes=None):
         rec['desc_boxed'], rec['desc_boxed_full'] = ' '.join(bd), rec['desc']
     if bm:
         rec['marks_boxed'], rec['marks_boxed_full'] = ' '.join(bm), rec['marks']
+    # กฎผู้ใช้ (2026-11-27, SWDN 1100797): กรอบแดงครอบช่องตัวเลข (จำนวน / G.W. / MEAS.) = ลูกค้าแจ้งเฉพาะช่องในกรอบ —
+    # ช่องตัวเลขที่ไม่อยู่ในกรอบ "ไม่ได้ใส่ข้อมูลนั้น" → ไม่ตรวจ (ตีกรอบแค่ Gross weight → MEAS. ไม่ตรวจ)
+    _num = {'pkgs': pkl, 'gw': kgs, 'meas': cbm}
+    _in = {k for k, l in _num.items() if l is not None and box_of(l)}
+    if _in:
+        rec['skip_fields'] = [k for k in _num if k not in _in and rec.get(k) is not None]
     if rec['pkgs'] and not rec['pkgtype']:   # ชนิดหีบห่ออยู่ในรายละเอียด: '920 PACKAGES = 920 BASKETS'
         mp = re.search(rf"\b{rec['pkgs']}\s+([A-Z()]+)", rec['desc'], re.I)
         if mp and PKG_WORD_RE.match(mp.group(1)):
@@ -2070,6 +2089,14 @@ def apply_bundle_rules(MAN, ENT):
             e[k + '_full'] = full
             e[k + '_inbox'] = bx
             e[k] = m[k] if _an(bx) and _an(bx) in _an(m.get(k)) else bx
+        # ช่องตัวเลขนอกกรอบแดง (ลูกค้าตีกรอบช่องอื่นในแถวเดียวกัน) = ไม่ได้แจ้ง → ใช้ค่า MF (ไม่ตรวจ) บอกค่าเดิมในหมายเหตุ
+        _mfv = {'pkgs': lambda: be.pkgnum(m.get('pkg_hdr')), 'gw': lambda: be.num(m.get('gw')),
+                'meas': lambda: be.num(m.get('meas'))}
+        for k in e.pop('skip_fields', None) or []:
+            v = _mfv[k]()
+            if v is not None:
+                e.setdefault('unboxed', {})[k] = e.get(k)
+                e[k] = v
         # ARRIVAL NOTICE/สำเนา B/L ของ Heung-A เอง: MANIFEST ตัดข้อความ B/L บางส่วนออก (HS CODE, ที่อยู่ '*…',
         # TEL ฯลฯ) — ถ้า MANIFEST เป็นส่วนหนึ่งของ ENTER ตามลำดับ ถือว่าตรง แต่บอกส่วนเกินไว้ในหมายเหตุ
         for k in ('marks', 'desc'):
@@ -2196,6 +2223,9 @@ def annotate_report(outpath, MAN, ENT, info):
                         prefix += f"{lbl} ตรง (MANIFEST เป็นส่วนหนึ่งของ B/L) — ENTER มีเพิ่ม: {ENT[bl][k + '_extra']} ; "
                     if ENT[bl].get(k + '_inbox'):
                         prefix += f"{lbl} ตรวจเฉพาะในกรอบแดงของลูกค้า: {ENT[bl][k + '_inbox']} ; "
+            _lb = {'pkgs': 'TOTAL PKG', 'gw': 'G.W.', 'meas': 'MEAS.'}
+            for k, v in (ENT[bl].get('unboxed') or {}).items():
+                prefix += f"{_lb[k]} ไม่อยู่ในกรอบแดงของลูกค้า = ไม่ได้แจ้ง ไม่ตรวจ (ENTER พิมพ์ {v:,.3f}) ; "
         elif bl in MAN and bl not in ENT:
             if bl in by_cont:
                 pg = by_cont[bl]
