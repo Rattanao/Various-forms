@@ -38,7 +38,11 @@ skill is the single home for all of them.
 - **User rule (2026-11-27, later): SHED is checked for one case only — DG at DISCHARGE LAEM CHABANG must be 2826.**
   "เพิ่มกฎการตรวจ SHED 2826 DG สำหรับ DISCHARGE LAEM CHABANG เท่านั้น หาก M/F ปรากฏ dg class un แล้วใส่ shed ไม่ถูกให้
   แจ้งเตือน เพิ่มหัวข้อ SHED (MANIFEST) และหาก ENTER ไม่มี class un ให้แจ้งเตือน" →
-  - The column is now **SHED (MANIFEST)** and always shows the MF value. When MF port of discharge is LAEM CHABANG
+  - **Update (same day): "ตอนนี้ให้ว่าง SHED อื่นไปก่อน ตรวจเฉพาะ DG ย้าย SHED (MANIFEST) ไปไว้ก่อน DG"** — the column
+    sits between REEFER TEMP and DG (`_OLD_TO_NEW` 24→23, DG 22→24, TRANSIT 23→25) and is **blank** for every B/L
+    that is not checked; only DG at LAEM CHABANG shows the MF SHED (red if ≠ 2826). Regression by column name: only
+    SHED cells changed in job-01…07.
+  - (Before the update) the column was **SHED (MANIFEST)** and always showed the MF value. When MF port of discharge is LAEM CHABANG
     and MF has DG (CLASS or UN), SHED ≠ 2826 → red `… (ต้องเป็น 2826 — DG LAEM CHABANG)`; every other B/L is not
     checked (white). TOTAL cell `SHED DG ไม่ตรง n B/L`.
   - DG passes only when ENTER gives **every** CLASS and UN the MF gives, with the same values; a missing one →

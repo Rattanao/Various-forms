@@ -252,7 +252,7 @@ def compute_extra_checks(m, e):
                            'note': None if ok else f"SHED NO. ไม่ตรง — DG ที่ DISCHARGE LAEM CHABANG ต้องเป็น 2826 "
                                                    f"(MANIFEST: {raw.strip() or '(ว่าง)'})"}
         else:
-            out['shed'] = {'ok': None, 'text': raw.strip() or '-', 'note': None}
+            out['shed'] = {'ok': None, 'text': '', 'note': None}   # ผู้ใช้ 2026-11-27: SHED อื่นเว้นว่างไว้ก่อน
     elif ok is None:
         out['shed'] = {'ok': None, 'text': '-', 'note': None}
     elif ok and lbl == 'SHED ที่แจ้ง':
@@ -2558,8 +2558,8 @@ HEAD = ['สรุปผลเร่งด่วน', 'B/L NO.',
         'MEAS. MTQ (ENTER)', 'MEAS. MTQ (MANIFEST)',
         'MARKS (ENTER)', 'MARKS (MANIFEST)',
         'DESC. (ENTER)', 'DESC. (MANIFEST)',
-        'REEFER TEMP', 'DG', 'TRANSIT/TRANSHIPMENT',
-        'SHED (MANIFEST)', 'ประเทศปลายทาง', 'CARGO MOVEMENT',
+        'REEFER TEMP', 'SHED (MANIFEST)', 'DG', 'TRANSIT/TRANSHIPMENT',
+        'ประเทศปลายทาง', 'CARGO MOVEMENT',
         'หมายเหตุ / จุดที่ไม่ตรงกัน']
 NC = len(HEAD)
 # เลขคอลัมน์ "เดิม" ที่ตรรกะการตรวจในฟังก์ชันนี้ใช้อ้างอิงตลอด (mk()/cs[...]/row เรียงตามนี้)
@@ -2568,6 +2568,8 @@ COL_SHED, COL_DESTCODE, COL_MOVEMENT, COL_TAXID, COL_NOTE = 24, 25, 26, 27, 28
 # ขวาไป 1 ช่อง (6-27), 28 (หมายเหตุ) เท่าเดิม (นับสุทธิพอดีเพราะแทรก 1 ช่องแล้วก็ตัดออกไป 1 ช่อง)
 _OLD_TO_NEW = {1: 1, 2: 2, 3: 3, 4: 4, 27: 5, 28: 28}
 _OLD_TO_NEW.update({old: old + 1 for old in range(5, 27)})
+# [bundle-enter-check] ผู้ใช้ 2026-11-27: ย้าย SHED (MANIFEST) (เดิม 24) มาไว้ก่อน DG — REEFER, SHED, DG, TRANSIT
+_OLD_TO_NEW.update({24: 23, 22: 24, 23: 25})
 _NEW_TO_OLD = {v: k for k, v in _OLD_TO_NEW.items()}
 
 
