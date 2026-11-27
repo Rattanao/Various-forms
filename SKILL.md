@@ -19,6 +19,18 @@ skill is the single home for all of them.
   from MF is still a critical row); **WOODEN CASE ≠ CASE**; the user gives the SHED NO. every time —
   every B/L must match it (match = `-`) except LAOS 0124; Laos = **(LA)**.
 
+## GitHub repo (2026-11-27)
+
+The program is published at **https://github.com/Rattanao/Various-forms** (local clone `Downloads/Various-forms`,
+branch `main`; guide page `docs/index.html` → https://rattanao.github.io/Various-forms/ once Pages is on:
+Settings → Pages → Deploy from branch → `main` / `/docs`). It holds `SKILL.md`, `scripts/`, `README.md`,
+`run-check-edi.bat` (asks SHED, writes `output/EDI-<date-time>.xlsx`), `requirements.txt`, `.gitignore`
+(input/, output/, tests/, *.xls, *.xlsx, *.pdf never go up). There is no in-browser checker: Windows OCR +
+~4,000 lines of Python. **To update the repo after changing this skill:** copy `SKILL.md` + `scripts/*.py|ps1`
+into the clone, run the sanitizer (customer names used as examples → ABC/XYZ, real B/L digits → 0, real
+container digits → 0000000; regexes are untouched), check `ast.parse`, re-run one test job from the clone and
+compare with the skill's own output (must be 0 differences), then commit + push. Customer files never go up.
+
 ## Files
 
 - `scripts/bundle_edi.py` — the bundle reader (page types, form profiles, OCR) + report post-processing.
