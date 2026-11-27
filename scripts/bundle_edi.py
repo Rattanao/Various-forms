@@ -484,7 +484,9 @@ def parse_blform(lines, annots, page, gap_cut=False, boxes=None):
     for a in annots:
         if a['t'] in labelled:
             continue
-        typed += [p for p in a['lines'] if is_status_line(p)]
+        # FreeText สั้น ๆ ที่ลงท้ายด้วย CY / LCL / FCL ('CY', 'ตามหน้า BL  CY') = STATUS ที่ลูกค้าแจ้ง (SWDN 2026-11-27)
+        typed += [p for p in a['lines'] if is_status_line(p)
+                  or (len(p.strip()) <= 30 and re.search(r'(?:^|\s)(?:CY(?:/CY)?|FCL|LCL)\s*$', p, re.I))]
         rec['dg'] = rec['dg'] or be.find_dg(a['t'])
         rec['reefer'] = rec['reefer'] or find_reefer(a['t'])
         if be.TRANSIT_RE.search(a['t']):

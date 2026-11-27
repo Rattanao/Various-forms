@@ -39,6 +39,10 @@ skill is the single home for all of them.
   → on a Heung-A B/L page (BLFORM), when a red box covers one of the number cells (TOTAL PKG / G.W. / MEAS.),
   the number cells **outside** any red box were not given by the customer: they are not checked (ENTER value
   replaced by the MF value; note `MEAS. ไม่อยู่ในกรอบแดงของลูกค้า = ไม่ได้แจ้ง ไม่ตรวจ (ENTER พิมพ์ 55.000)`).
+  **No red box on the page (e.g. FreeText `ตามหน้า BL  CY`) = every value on the B/L page is the customer's
+  data and is checked in full** (user confirmed 2026-11-27 with `HASLC…797_ตามหน้า BL .pdf` / `_CY.pdf`: MEAS. 55
+  vs MF 0.000 stays red). A short FreeText ending in `CY` / `CY/CY` / `FCL` / `LCL` (≤ 30 characters) is the
+  customer's STATUS (regression: 8 STATUS cells in job-02 / job-06 went from "(ไม่ระบุใน ENTER)" to CY, all = MF).
   `red_boxes()` now also finds red boxes drawn as plain red lines in the page (`get_drawings`, no fill,
   > 25×10 pt), not only Square annotations. Regression: 50 B/Ls in job-01…07 changed, all by this rule (mostly
   MF MEAS. 0.000 with an unboxed ENTER MEAS. → pass); no new mismatch.
