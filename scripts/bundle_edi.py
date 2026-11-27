@@ -2026,6 +2026,17 @@ def apply_bundle_rules(MAN, ENT):
             m['pkg_hdr'] = f"{mp.group(1)} {mp.group(3).upper()} ({mp.group(3)}(s))"
     _an = lambda s: re.sub(r'[^A-Z0-9]', '', str(s or '').upper())
     for bl, e in ENT.items():
+        # กฎผู้ใช้ (2026-11-27, SWDN 1002364): 'CL9' / 'CL 9' / 'CL.9' = 'CLASS 9' — แทนเฉพาะเมื่อ MF ของ B/L นั้น
+        # เขียน CLASS เลขเดียวกัน (กัน 'CL1' ที่เป็นรหัสสินค้า) ; DG ของ ENTER อ่านใหม่ให้ได้ CLASS ด้วย
+        mt = ' '.join(str((MAN.get(bl) or {}).get(k) or '') for k in ('desc', 'dg')).upper()
+        for k in ('desc', 'desc_boxed', 'desc_boxed_full', 'marks', 'marks_boxed', 'marks_boxed_full'):
+            if isinstance(e.get(k), str) and e[k]:
+                e[k] = re.sub(r'\bCL\.?\s?(\d(?:\.\d)?)\b',
+                              lambda q: f'CLASS {q.group(1)}' if re.search(rf'\bCLASS\s*{re.escape(q.group(1))}\b', mt)
+                              else q.group(0), e[k], flags=re.I)
+        _dt = ' '.join(str(e.get(k) or '') for k in ('desc', 'desc_boxed', 'desc_boxed_full'))
+        if e.get('dg') and 'CLASS' not in e['dg'].upper() and re.search(r'\bCLASS\s*\d', _dt, re.I):
+            e['dg'] = be.find_dg(_dt) or e['dg']
         if re.search(r'\bREELS?\b', e.get('pkgtype') or '', re.I):
             e['pkgtype'] = 'REEL (ROLL)'
         # 'FLEXIBAG' / 'FLEXITANK' = ถุงของเหลวในตู้ = TANK ของ MF (SWDN 2026-11-27 '1 FLEXIBAG, FLEXI')

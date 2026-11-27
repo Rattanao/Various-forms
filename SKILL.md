@@ -177,6 +177,7 @@ then run the regression (end of this section). Prefer **one `FORM_PROFILES` entr
 | MF that prints the **container count `X1` / `X2`** as the first line of the description column (SAWASDEE DENEB 2612S) | `X<n>` removed from MF DESC when n = the B/L's container count | 2026-11-27 (job-07) |
 | ENTER package `FLEXIBAG` / `FLEXITANK` | = TANK (MF `TK (TANK)`) | 2026-11-27 (job-07 p10) |
 | STATUS typed `ลากตุ้` (ุ instead of ู) | repaired to ลากตู้ = CY | 2026-11-27 (job-07 p32) |
+| ENTER `CL9` / `CL 9` / `CL.9` vs MF `CLASS 9` (user: "CL ก็คือ CLASS ถูกต้อง") | `apply_bundle_rules` turns `CL n` into `CLASS n` in ENTER DESC/MARKS (also the red-box text) only when that B/L's MF has `CLASS n`; ENTER DG gets the CLASS from it. Regression: job-07 13 cells (1002364 DESC now matches, 3 DG B/Ls show CLASS 9), job-01…06 0 | 2026-11-27 (job-07 p6, p7, p16) |
 | Scanned ARRIVAL NOTICE: weight row 4–5pt off the SHIPPER'S LOAD row, `24,016.000 KGS :` (column rule read as `:`), `55. eoeo` / `49, øee` (space inside a number), `CBM` unreadable, `& WEIGHT` split off | OCR row tolerance 6pt (OCR only), leading/trailing `:` dropped, number pieces joined, a bare decimal right of the weight = MEAS., `KGS 89.0000 CBM` in one piece → number after KGS | 2026-11-27 (job-07 p24, p16) |
 
 ### Forwarder forms that already have a dedicated reader (automatic, 2026-11-06)
