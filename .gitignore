@@ -1,0 +1,11 @@
+# ไฟล์ลูกค้า (MF / ENTER / รายงาน) อยู่ในเครื่องเท่านั้น ห้ามขึ้น GitHub
+input/*
+!input/.gitkeep
+output/*
+!output/.gitkeep
+tests/
+*.xls
+*.xlsx
+*.pdf
+__pycache__/
+*.pyc
