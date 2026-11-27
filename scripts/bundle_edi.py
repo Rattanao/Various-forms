@@ -457,7 +457,7 @@ def parse_blform(lines, annots, page, gap_cut=False, boxes=None, words=None):
                 bd.append(t)
     rec['marks'] = ' '.join(marks)
     rec['desc'] = ' '.join(desc)
-    # SWDN 2026-11-27 หน้า 9: ลูกค้าตีกรอบ "บางส่วนของบรรทัด" ('DL-METHIONINE 99%' + 'FEED GRADE') — บรรทัดแรกไม่อยู่ใน
+    # SWDN 2026-11-27 หน้า 9: ลูกค้าตีกรอบ "บางส่วนของบรรทัด" (ครึ่งบรรทัด + บรรทัดถัดไป) — บรรทัดแรกไม่อยู่ใน
     # กรอบทั้งบรรทัด จึงอ่านทีละคำ: คำที่จุดกลางอยู่ในกรอบแดงซึ่งทับบรรทัด DESC / MARKS
     if words and boxes:
         def _w_in(lo, hi, lns):
