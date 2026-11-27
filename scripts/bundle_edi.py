@@ -1522,8 +1522,15 @@ def parse_enter_bundle(path, bl_re, man_bls=()):
             table_doc = None
         if kind == 'BLFORM':
             _pg = doc[p - 1]
-            recs = parse_blform(ls, an, p, boxes=mark_rects(_pg),
+            # ผู้ใช้ 2026-11-27: ลูกค้าเขียน "ENTER ตามหน้า BL" = แจ้งทุกอย่างตามหน้า B/L → ตรวจทั้งหน้า (ไม่ใช้กฎเครื่องหมาย
+            # กรอบแดง / ป้ายสี / ขีดเส้นใต้ — ช่องที่ไม่ได้ทำเครื่องหมายก็ตรวจ)
+            _all = re.search(r'ตามหน้า\s*(?:B\s*/?\s*L|บี\s*แอล|เอกสาร)|AS\s*PER\s*(?:THE\s*)?(?:B\s*/\s*L|BILL\s*OF\s*LADING)\b',
+                             ' '.join([l['t'] for l in ls] + [a['t'] for a in an]), re.I)
+            recs = parse_blform(ls, an, p, boxes=None if _all else mark_rects(_pg),
                                 words=_pg.get_text('words') if page_rot(_pg) not in ((0, -1), (0, 1)) else None)
+            if _all:
+                for _r in recs.values():
+                    _r['as_per_bl'] = _all.group(0)
             if p in garbled:
                 for r in recs.values():
                     r['ocr'] = True               # ค่าจากชั้นข้อความ OCR ของสแกน — ขึ้นสีส้ม ตรวจด้วยตา
@@ -2324,6 +2331,8 @@ def annotate_report(outpath, MAN, ENT, info):
                         prefix += f"{lbl} ตรง (MANIFEST เป็นส่วนหนึ่งของ B/L) — ENTER มีเพิ่ม: {ENT[bl][k + '_extra']} ; "
                     if ENT[bl].get(k + '_inbox'):
                         prefix += f"{lbl} ตรวจเฉพาะในกรอบแดงของลูกค้า: {ENT[bl][k + '_inbox']} ; "
+            if ENT[bl].get('as_per_bl'):
+                prefix += f"ลูกค้าแจ้ง \"{ENT[bl]['as_per_bl']}\" = ตรวจทุกช่องตามหน้า B/L (ไม่ใช้กฎเครื่องหมาย) ; "
             if ENT[bl].get('marks_nodecl'):
                 prefix += (f"MARKS ไม่ได้ทำเครื่องหมาย (กรอบแดง / ป้ายสี / ขีดเส้นใต้) = ลูกค้าไม่ได้แจ้ง → MF ต้องไม่มี MARKS "
                            f"(ENTER พิมพ์: {ENT[bl]['marks_nodecl']}) ; ")
