@@ -44,6 +44,11 @@ skill is the single home for all of them.
     SHED cells changed in job-01…07.
   - **Update 2: "ถ้ามันถูกต้องและตรงให้ใส่ - ถ้ามันไม่ตรงก็แจ้งเตือน"** — DG SHED 2826 correct → `-`; DG that matches
     (CLASS/UN complete) → `-`; wrong/missing → red with the values. REEFER that matches (TEMP same + MF has VENT) also shows `-` ("REEFER ที่ตรงกันให้ใส่ - ด้วย").
+- **Every matching pair = `-` (2026-11-27, "ช่องที่ตรงกันอื่นๆ ให้ใส่ - ด้วย"):** CNEE, CNTRS NO., TOTAL PKG, PKG.,
+  G.W., MEAS., MARKS, DESC. — when ENTER and MANIFEST match, both cells show `-` (`build_report`, before `_reorder`);
+  a mismatch keeps both values (red / orange). Rows read by OCR keep their values (check by eye); MF B/Ls without
+  ENTER are unchanged; notes (red box / extra text / unboxed numbers) stay. `annotate_report` no longer writes the
+  full ENTER MARKS/DESC over a `-`. Regression: every changed cell in job-01…07 became `-`, no fill changed.
 - **STATUS (2026-11-27):** "STATUS (ENTER) / STATUS (MANIFEST) status เดียวกัน เช่น ลากตู้, CY ตรงกับ m/f ที่เป็น CY
   เปลี่ยนเป็น -" → when both sides give a STATUS and they mean the same (CY,CY/CY,FCL,ลากตู้=CY ; LCL,ขน(ส่ง)=LCL ;
   CFS,LCL/CFS,เปิดตู้=LCL/CFS) **both cells show `-`**; the customer's own wording (ด่วน / HOT BOX / เร่งเปิดตู้) moves

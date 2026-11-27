@@ -2781,9 +2781,13 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
             if same_detail(e['marks'], m['marks']) is False:
                 mk(17, False); mk(18, False)
                 notes.append(f"MARKS ไม่เหมือนกัน (ENTER: {e['marks'] or '(ว่าง)'} / MANIFEST: {m['marks'] or '(ว่าง)'})")
+            else:
+                mk(17, True); mk(18, True)
             if same_detail(e['desc'], m['desc']) is False:
                 mk(19, False); mk(20, False)
                 notes.append(f"DESCRIPTION ไม่เหมือนกัน (ENTER: {e['desc'] or '(ว่าง)'} / MANIFEST: {m['desc'] or '(ว่าง)'})")
+            else:
+                mk(19, True); mk(20, True)
 
         # REEFER TEMP / DG (CLASS/UN) — พบที่ฝั่งใดก็ต้องเตือนเสมอ (มีผลทางกฎหมาย)
         re_e, re_m = e['reefer'] or '', m['reefer'] or ''
@@ -2948,6 +2952,14 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
                reefer, dg, transit_disp,
                xc['shed']['text'], xc['dest']['text'], xc['mv']['text'], xc['tax']['text'],
                ' ; '.join(notes) if notes else '-']
+        # [bundle-enter-check] ผู้ใช้ 2026-11-27: "ช่องที่ตรงกันอื่น ๆ ให้ใส่ - ด้วย" — คู่ ENTER/MANIFEST ที่ตรงกัน
+        # (CNEE, CNTR, TOTAL PKG, PKG., G.W., MEAS., MARKS, DESC.) แสดง '-' ทั้ง 2 ช่อง ; ไม่ตรง = ค่าจริง + แดง/ส้ม.
+        # แถวที่อ่านด้วย OCR คงค่าไว้ (ต้องตรวจด้วยตา)
+        if MF_ORDER and not e.get('ocr'):
+            for a_, b_ in ((3, 4), (5, 6), (9, 11), (10, 12), (13, 14), (15, 16), (17, 18), (19, 20)):
+                if cs.get(a_) == 'ok' and cs.get(b_) == 'ok' and row[a_ - 1] not in (None, '') \
+                        and row[b_ - 1] not in (None, ''):
+                    row[a_ - 1] = row[b_ - 1] = '-'
         # สลับลำดับคอลัมน์จาก "เดิม" (ที่ใช้อ้างอิงในตรรกะข้างบนทั้งหมด) เป็นลำดับ "จริง" ตาม HEAD —
         # ดูคอมเมนต์ตรง _OLD_TO_NEW ด้านบนไฟล์
         row = _reorder(row)

@@ -2220,7 +2220,8 @@ def annotate_report(outpath, MAN, ENT, info):
                 prefix += ENT[bl]['cons_note'] + ' ; '
             for k, lbl in (('marks', 'MARKS'), ('desc', 'DESC.')):
                 if ENT[bl].get(k + '_full'):
-                    ws.cell(r, c_full[k]).value = ENT[bl][k + '_full']
+                    if ws.cell(r, c_full[k]).value != '-':      # ตรงกัน = '-' คงไว้ (ผู้ใช้ 2026-11-27)
+                        ws.cell(r, c_full[k]).value = ENT[bl][k + '_full']
                     if ENT[bl].get(k + '_attached'):
                         prefix += f"{lbl} ตรง (30 ตัวอักษรแรกก่อน *AS PER ATTACHED SHEET* ใน MANIFEST ตรงกับต้นข้อความ ENTER) ; "
                     if ENT[bl].get(k + '_extra'):
