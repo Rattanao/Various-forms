@@ -22,8 +22,8 @@ skill is the single home for all of them.
 ## GitHub repo (2026-11-27)
 
 The program is published at **https://github.com/Rattanao/Various-forms** (local clone `Downloads/Various-forms`,
-branch `main`; guide page `docs/index.html` → https://rattanao.github.io/Various-forms/ once Pages is on:
-Settings → Pages → Deploy from branch → `main` / `/docs`). It holds `SKILL.md`, `scripts/`, `README.md`,
+branch `main`; guide page https://rattanao.github.io/Various-forms/ — live 2026-11-27; Pages serves `main` / root,
+so the page is the root `index.html` (+ `.nojekyll`); keep `docs/index.html` identical). It holds `SKILL.md`, `scripts/`, `README.md`,
 `run-check-edi.bat` (asks SHED, writes `output/EDI-<date-time>.xlsx`), `requirements.txt`, `.gitignore`
 (input/, output/, tests/, *.xls, *.xlsx, *.pdf never go up). There is no in-browser checker: Windows OCR +
 ~4,000 lines of Python. **To update the repo after changing this skill:** copy `SKILL.md` + `scripts/*.py|ps1`
