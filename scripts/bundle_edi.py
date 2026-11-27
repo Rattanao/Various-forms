@@ -116,7 +116,11 @@ def in_annot(l, annots):
        ป้ายของฟอร์มเอง (Shipper / Consignee / Notify Party) ไม่ใช่ข้อความที่ลูกค้าพิมพ์ทับ แม้กรอบสีแดงจะชิดป้าย"""
     if nospace(l['t']) in _FORM_LABELS:
         return False
+    # บรรทัดของฟอร์มที่กรอบ annotation บังบางส่วน แต่ไม่ใช่ข้อความของ annotation (RICH FREIGHT 'CNEE : …'
+    # อยู่ใต้กรอบ CTN/STATUS ที่ลูกค้าแปะ, SWDN 2026-11-27) — ไม่นับเป็นข้อความ annotation
+    lt = nospace(l['t'])
     return any(a['rect'].x0 - 3 <= l['x'] <= a['rect'].x1 and a['rect'].y0 - 3 <= l['y'] <= a['rect'].y1 + 1
+               and (l['x'] >= a['rect'].x0 - 1 or len(lt) < 6 or lt[:6] in nospace(a['t']))
                for a in annots)
 
 
@@ -232,7 +236,8 @@ FORWARDER_PAGES = [
     ('SHARED_SHIPCO', lambda ns, ls: 'CUSTOMSIMPORTMANIFEST' in ns and 'ACTUALCONSIGNEE' in ns),                     # layout E
     ('SHARED_PLANET', lambda ns, ls: 'B/LCHANGENO' in ns and 'HB/LNO' in ns and _has_line(ls, r'^CNTR\s*NO\.?\s*:')),   # layout K
     ('SHARED_UNIONWORLD', lambda ns, ls: 'B/LCHANGENO' in ns and 'HB/LNO' in ns and _has_line(ls, r'^STATUS\s*=')),    # layout I
-    ('SHARED_AGN', lambda ns, ls: 'B/LCHANGENO' in ns and 'HB/LNO' not in ns),                                       # layout D (AGN / Handle Inter)
+    ('SHARED_AGN', lambda ns, ls: 'B/LCHANGENO' in ns and 'HB/LNO' not in ns
+                                  and 'UNICORNGLOBALLOGISTICS' not in ns),   # UNICORN = TABLE + โปรไฟล์ (SWDN 2026-11-27)                                     # layout D (AGN / Handle Inter)
     ('SHARED_LAYOUTB', lambda ns, ls: 'MARKS&NOS' in ns and 'DESCRIPTIONSOFGOODS' in ns and 'GROSSWT.&MEAS' in ns),  # layout B (Able / Quality)
 ]
 # หน้าต่อเนื่อง/ใบปะหน้าของฟอร์มเดียวกัน (ลายเซ็นพิมพ์แค่หน้าแรก เช่นหน้า 2… ของ Able/Quality, ใบปะหน้า Freight Links)
@@ -351,12 +356,19 @@ def parse_blform(lines, annots, page, gap_cut=False, boxes=None):
              and l['y'] > y_sl]
     y_t = min(tots) if tots else y_sl + 230
     # น้ำหนัก = ตัวเลขติดหน่วย KGS ('25,040.000 KGS') — ไม่ใช่ '720 PKGS' ในช่องจำนวน (SAWASDEE MIMOSA 2611S หน้า 175)
-    kgs = next((l for l in body if abs(l['y'] - y_sl) < 4 and re.search(r'KGS', l['t']) and not re.search(r'PKGS?\b', l['t'])), None)
-    cbm = next((l for l in body if abs(l['y'] - y_sl) < 4 and re.search(r'CBM', l['t'])), None)
+    tol = 6 if gap_cut else 4            # ภาพสแกน (OCR) แถวเอียงได้ 4–5pt (SWDN 2026-11-27 หน้า 24)
+    kgs = next((l for l in body if abs(l['y'] - y_sl) < tol and re.search(r'KGS', l['t']) and not re.search(r'PKGS?\b', l['t'])), None)
+    cbm = next((l for l in body if abs(l['y'] - y_sl) < tol and re.search(r'CBM', l['t'])), None)
+    if gap_cut and not cbm and kgs:      # OCR อ่านคำ CBM ไม่ออก: ตัวเลขทศนิยมขวาของน้ำหนักในแถวเดียวกัน = MEAS.
+        cbm = next((l for l in body if abs(l['y'] - y_sl) < tol and l['x'] > kgs['x1']
+                    and re.fullmatch(r'[\d,]+\.\d+', l['t'].strip()) and be.num(l['t']) < 1000), None)
     pkl = next((l for l in body if abs(l['y'] - y_sl) < 4 and l['x'] < x_sl - 2 and re.match(r'^\d', l['t'])), None)
     x_gw = (kgs['x'] if kgs else 420) - 6
     rec['gw'] = be.num(kgs['t']) if kgs else None
     rec['meas'] = be.num(cbm['t']) if cbm else None
+    if cbm is not None and cbm is kgs:   # 'KGS 89.0000 CBM' / '41,000.000 KGS 41.000 CBM' ชิ้นเดียวกัน → ตัวเลขหลัง KGS
+        mm = re.search(r'KGS\W*([\d,]+\.?\d*)', cbm['t'])
+        rec['meas'] = be.num(mm.group(1)) if mm else None
     if pkl:
         rec['pkgs'], rec['pkgtype'] = split_pkg(pkl['t'])
         if not rec['pkgtype']:            # '7' กับ 'PALLETS' เป็นคนละชิ้นข้อความในแถวเดียวกัน
@@ -740,6 +752,30 @@ def _label_value(lines, pat):
 # แต่ละบรรทัดใต้หัวตารางลงคอลัมน์ตาม "จุดกึ่งกลาง" ของบรรทัด เทียบกับเส้นแบ่งกึ่งกลางระหว่างหัวคอลัมน์ที่ติดกัน
 # (หัวคอลัมน์มักพิมพ์กึ่งกลางช่อง ส่วนข้อมูลชิดซ้าย — ใช้ x ซ้ายตรง ๆ จะตกผิดช่อง)
 FORM_PROFILES = [
+    # ── SAWASDEE DENEB 2612S (2026-11-27) ──
+    # CK LINE 'AMENDMENT' — ตารางแถวเดียว B/L / D/O / CONSIGNEE / MARKS / QUANTITY / DESCRIPTION / G.W / Measurment
+    # ค่าชิดซ้ายแต่หัวอยู่กลางคอลัมน์; แถวยอดรวมอยู่ห่างลงไป ~200pt → 'gap' หยุดอ่าน
+    {'name': 'CK LINE', 'sig': r'CK\s+LINE\s+\(THAILAND\)',
+     'hdr': {'B/L NO.': 'BL', 'D/O NO.': 'REMARK', 'CONSIGNEE': 'CONS', 'MARKS & NUMBER': 'MARKS', 'QUANTITY': 'PKG',
+             'DESCRIPTION': 'DESC', 'G.W': 'GW', 'MEASURMENT': 'MEAS', 'MEASUREMENT': 'MEAS'},
+     'gap': 60, 'stop': r'^(TOTAL|REMARK|THANK)'},
+    # EXTRA MARITIME — 'Gross Weigh Volume' หัวเดียวคลุม 2 ค่า: '12,600.00' (ไม่มีหน่วย = G.W.) / '30.000 CBM'
+    {'name': 'EXTRA MARITIME', 'sig': r'E\s*X\s*T\s*R\s*A\s+M\s*A\s*R\s*I\s*T\s*I\s*M\s*E',
+     'hdr': {'MARKS & NUMBER': 'MARKS', 'NBR OF PKGS': 'PKG', 'DESCRIPTION OF GOODS': 'DESC',
+             'GROSS WEIGH VOLUME': 'GW', 'GROSS WEIGHT VOLUME': 'GW'},
+     'skip': r'^KGS\.?$', 'stop': r'^(CNEE|STATUS|B/L NO)'},
+    # RICH FREIGHT 'ATTACHED LIST' (Page 2/2) — B/L อยู่ในบรรทัด 'DO NO. : …', CNEE/CTN/STATUS ใต้ตาราง
+    {'name': 'RICH FREIGHT', 'sig': r'RICH\s+FREIGHT\s+FORWARDER',
+     'hdr': {'MARKS': 'MARKS', 'NO.OF PACKAGES': 'PKG', 'DESCRIPTION OF GOODS': 'DESC', 'GROSS WEIGHT': 'GW',
+             'MEASUERMENT': 'MEAS', 'MEASUREMENT': 'MEAS'},
+     'rx': {'CONS': r'^CNEE\s*:\s*(.+)$'},
+     'stop': r'^(CNEE|DO NO|CTN|STATUS|\*\*\*)'},
+    # สหไทย เทอร์มินอล (Sahathai) 'pre-lading manifest' — หัว Consignee Name / No of package / Description / G.W. /
+    # Mark & No.; 'Meas.' พิมพ์แยกใต้ G.W. ค่าอยู่บรรทัดล่าง ('68.000CBM' = MEAS. ตามหน่วย)
+    {'name': 'SAHATHAI TERMINAL', 'sig': r'Sahathai\s+Terminal',
+     'hdr': {'CONSIGNEE NAME': 'CONS', 'NO OF PACKAGE': 'PKG', 'DESCRIPTION OF GOODS': 'DESC', 'G.W.': 'GW',
+             'MARK & NO.': 'MARKS'},
+     'skip': r'^MEAS\.?$', 'stop': r'^(REMARK|THANK|YOURS)'},
     {'name': 'H & FRIENDS GTL', 'sig': r'H\s*&\s*FRIENDS\s+GTL',          # 2026-11-03 DONGJIN CONFIDENT 0153S
      'hdr': {'MARKS': 'MARKS', 'QUANTITY': 'PKG', 'DESCRIPTION': 'DESC', 'WEIGHT': 'GW', 'CBM': 'MEAS'},
      'stop': r'^(จ่ายเงิน|Consignee Name|Place Of Delivery|Status|Notify Party|WE HEREBY)'},
@@ -919,6 +955,8 @@ def _assign_parts(rec, parts):
         for t in parts['CONS']:                      # ชื่อตัดคำท้ายบรรทัด ('…SYSTEM' + 'S') ต่อกลับไม่เว้นวรรค
             if cl and len(t) <= 2 and t.isalpha():
                 cl[-1] += t
+            elif cl and re.fullmatch(r'\((?:HEAD\s*OFFICE|BRANCH[^)]*|สำนักงานใหญ่)\)', t, re.I):
+                cl[-1] += t                          # '…CO., LTD.' + '(HEAD OFFICE)' (Sahathai, SWDN 2026-11-27)
             else:
                 cl.append(t)
         rec['cons'] = company_name(cl)
@@ -986,9 +1024,13 @@ def apply_profile(rec, lines, annots):
     cols = sorted(((h['x'] + h['x1']) / 2, k) for k, h in hdr.items())
     cuts = [((a[0] + b[0]) / 2, a[1]) for a, b in zip(cols, cols[1:])] + [(1e9, cols[-1][1])]
     parts = {k: [] for _, k in cols}
+    last_y = hy
     for l in sorted((o for o in body if o['y'] > hy + 3), key=lambda o: (round(o['y']), o['x'])):
         if re.match(pf['stop'], l['t'], re.I):
             break
+        if pf.get('gap') and l['y'] - last_y > pf['gap']:   # แถวยอดรวมที่อยู่ห่างลงไป (CK LINE)
+            break
+        last_y = l['y']
         c = (l['x'] + l['x1']) / 2
         k = next(k for lim, k in cuts if c < lim)
         t = l['t'].strip()
@@ -1564,6 +1606,13 @@ def parse_enter_bundle(path, bl_re, man_bls=()):
                     scans[:] = [s for s in scans if s['page'] != p]
                 continue
             r = parse_ocr_page(ol, A[p - 1], p)
+            if any(re.search(r'ATTACHED\s*RIDER', l['t'], re.I) for l in ol)                     and not any("SHIPPER'S LOAD" in l['t'].upper() for l in ol):
+                # ATTACHED RIDER ที่เป็นภาพสแกน (SWDN 2026-11-27 หน้า 18) — รายละเอียดแทน 'AS PER ATTACHED DESCRIPTIONS'
+                _rb, rmk, _rt, rdesc = parse_rider([dict(l, t=_ocr_num(l['t'])) for l in ol], p)
+                if rdesc:
+                    r['rider_desc'] = rdesc
+                if rmk:
+                    r['rider_marks'] = rmk
             if any("SHIPPER'S LOAD" in l['t'].upper() for l in ol):
                 # ARRIVAL NOTICE สแกน: ใช้ตัวอ่าน BLFORM ตัวเดียวกับหน้าที่มีข้อความ (OCR มีพิกัดครบ)
                 # — ใช้เมื่ออ่านจำนวนหีบห่อและน้ำหนักได้ (ภาพเอียงจะอ่านคอลัมน์ไม่ได้ → ใช้ตัวอ่าน OCR เดิม)
@@ -1588,6 +1637,9 @@ def parse_enter_bundle(path, bl_re, man_bls=()):
         for bl, r in OCR.items():
             r['ocr'] = True
             r['low_confidence'] = True
+            rd = r.pop('rider_desc', '')
+            if rd and (not r.get('desc') or re.search(r'AS\s*PER\s*ATTACHED', r['desc'], re.I)):
+                r['desc'] = rd
             rm = r.pop('rider_marks', '')     # หน้า ATTACHED RIDER ที่เป็นภาพสแกนด้วย
             if rm and re.search(r'AS\s*PER\s*ATTACHED\s*RIDER', r['marks'] or '', re.I):
                 r['marks'] = re.sub(r'AS\s*PER\s*ATTACHED\s*RIDER', rm, r['marks'], flags=re.I).strip()
@@ -1697,6 +1749,8 @@ def _ocr_num(t):
         if re.search(r'\d', w) and re.fullmatch(r'[\dØøeoODQgIl|B,./:\-]+', w):     # '2B.eeøe' = 28.0000
             return w.translate(_OCR_DIGIT)
         return w
+    # ตัวเลขที่ OCR แยกด้วยช่องว่างหลังจุด/จุลภาค ('55. eoeo', '49, øee' — SWDN 2026-11-27) → ต่อกลับ
+    t = re.sub(r'(\d[.,])\s+(?=[\dØøeoOD]{2,}(?![A-Za-z]))', r'\1', t)
     return ' '.join(fix(w) for w in t.split())
 
 
@@ -1803,6 +1857,10 @@ def _ocr_blform_lines(ol, bl):
         t = _ocr_num(l['t']).replace('Ø', '0').replace('ø', '0')     # 'R4ØH SKRU0000000'
         t = re.sub(r'(?<=[A-Z]{4})[a-z]\b', '', t)                     # 'PACKAGESi' → 'PACKAGES'
         t = _ocr_cont_fix(t)
+        # เส้นแบ่งคอลัมน์ของฟอร์มที่ OCR อ่านเป็น ':' ท้าย/หน้าชิ้น ('24,016.000 KGS :', SWDN 2026-11-27)
+        t = re.sub(r'^[:;|]\s+|\s+[:;|]$', '', t)
+        if re.fullmatch(r'(?:COUNT\s*)?&\s*WEIGHT', t.strip(), re.I):   # ท้าย "SHIPPER'S LOAD, COUNT & WEIGHT" ที่ OCR ตัดแยก
+            continue
         # จำนวนหีบห่อที่ถูกวง/ไฮไลต์: '1±350 CTNS' / '1:800 BAGS' (จุลภาคหลักพันอ่านเป็นตัวอื่น)
         t = re.sub(r'^(\d)[:;±•·.](\d{3})(?=\s+[A-Z])', r'\1\2', t)
         t = re.sub(r'^[lI|][dDoOØø](?=\s+[A-Z]{3})', '10', t)          # 'ld PALLETS' = 10 PALLETS
@@ -1956,6 +2014,11 @@ def apply_bundle_rules(MAN, ENT):
             if not (m.get('status') or '').strip():
                 m['status'] = ml.group(1).upper()
             m['desc'] = m['desc'][ml.end():]
+        # MF บางลำ (SWDN 2026-11-27) พิมพ์จำนวนตู้ 'X2' เป็นบรรทัดแรกของช่องรายละเอียด (ใต้ STATUS) —
+        # ไม่ใช่รายละเอียดสินค้า ตัดออกเมื่อเลขเท่ากับจำนวนตู้ของ B/L นั้น
+        mx = re.match(r'^\s*X\s?(\d{1,3})\s+', m.get('desc') or '')
+        if mx and int(mx.group(1)) == max(1, len(m.get('cont') or [])):
+            m['desc'] = m['desc'][mx.end():]
         # รหัสหีบห่อของ MF กำกวม: 'PL' ปกติ = PALLET แต่ MF เขียนชื่อเต็มกำกับ '240 PL (PAIL(s))' → ใช้ชื่อเต็ม
         mp = re.match(r'^\s*([\d,]+)\s+(\S+)\s+\(([A-Z ]+)\(s\)\)', m.get('pkg_hdr') or '', re.I)
         if mp and be.PKG_KIND.get(mp.group(2).upper(), mp.group(3).upper()) != mp.group(3).upper() \
@@ -1965,6 +2028,12 @@ def apply_bundle_rules(MAN, ENT):
     for bl, e in ENT.items():
         if re.search(r'\bREELS?\b', e.get('pkgtype') or '', re.I):
             e['pkgtype'] = 'REEL (ROLL)'
+        # 'FLEXIBAG' / 'FLEXITANK' = ถุงของเหลวในตู้ = TANK ของ MF (SWDN 2026-11-27 '1 FLEXIBAG, FLEXI')
+        if re.search(r'FLEXI', e.get('pkgtype') or '', re.I):
+            e['pkgtype'] = 'TANK'
+        # STATUS พิมพ์สระผิด 'ลากตุ้' (ุ แทน ู) / ฟอนต์ถอดเป็นซีริลลิก — ซ่อมก่อนแปลงเป็น CY
+        if e.get('status_raw'):
+            e['status_raw'] = fix_thai_garble(e['status_raw'].replace('ตุ้', 'ตู้'))
         m = MAN.get(bl)
         # กฎผู้ใช้ (2026-11-03): MANIFEST '<ข้อความ> *AS PER ATTACHED SHEET*' — ถ้าทุกตัวอักษรก่อนคำนั้นตรงกับ
         # ต้นข้อความ ENTER (ไม่นับช่องว่าง/เครื่องหมาย) ถือว่าตรง ส่วนที่เหลือของ ENTER อยู่ใน ATTACHED SHEET

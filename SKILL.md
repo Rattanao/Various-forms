@@ -161,6 +161,16 @@ then run the regression (end of this section). Prefer **one `FORM_PROFILES` entr
 | OCR B/L unreadable or ambiguous (`HASLce1261æe11e`, `HASLC0000000000THSC`) | containers on the page and the MF consignee name decide; lower-case `HASLc` accepted | 2026-11-24 |
 | ARRIVAL NOTICE with count glued to the label (`8 TANK SHIPPER'S LOAD…`) | split before reading (used to crash) | 2026-11-24 |
 | Scanned ATTACHED RIDER `<< Mark Information >>` | OCR → its marks replace `AS PER ATTACHED RIDER` of the same B/L (B/L on the rider may be read as `HASL1022611øe793` — letter after HASL lost) | 2026-11-24 (job-05 p18) |
+| Scanned ATTACHED RIDER `<< Description Information >>` | OCR → `parse_rider` on the OCR lines; its description replaces `AS PER ATTACHED DESCRIPTIONS` | 2026-11-27 (job-07 p18) |
+| **CK LINE (THAILAND)** AMENDMENT (one-row table B/L NO. / D/O NO. / CONSIGNEE / MARKS & NUMBER / QUANTITY / DESCRIPTION / `G.W` / `Measurment`; values left-aligned under centred titles; total row ~200pt lower) | LETTER + profile `CK LINE` with `'gap': 60` (new profile key: stop reading at a vertical gap) — before, CNEE was read as `MARKS & NUMBER` | 2026-11-27 (job-07 p12, also job-02 p3) |
+| **EXTRA MARITIME** letter with a table (Marks & Number / Nbr of Pkgs / Description of Goods / `Gross Weigh Volume` = one title over `12,600.00` and `30.000 CBM`) | LETTER + profile — before, G.W. was read as 30 | 2026-11-27 (job-07 p14) |
+| **RICH FREIGHT FORWARDER** `*** ATTACHED LIST ***` (Page 2/2: MARKS / NO.OF PACKAGES / DESCRIPTION OF GOODS / GROSS WEIGHT / MEASUERMENT, then `CNEE :`, `DO NO. : <B/L>A`, customer FreeText CTN/STATUS box over the CNEE line) | LETTER + profile; a form line that starts left of a FreeText box and is not its text is kept (`in_annot`) | 2026-11-27 (job-07 p19) |
+| **UNICORN GLOBAL LOGISTICS** AMENDMENT with `B/L CHANGE NO.` (no HB/L NO) | no longer routed to SHARED_AGN (layout D misread it) — TABLE + the UNICORN profile; `***јѥдшѬҖ***` = ลากตู้ | 2026-11-27 (job-07 p26) |
+| **Sahathai Terminal** (สหไทย) "pre-lading manifest" letter (Consignee Name / No of package / Description of goods / G.W. / Mark & No.; `Meas.` printed under G.W.; `(HEAD OFFICE)` on the line under the name) | LETTER + profile `SAHATHAI TERMINAL`; `(HEAD OFFICE)` / `(BRANCH …)` joined to the name | 2026-11-27 (job-07 p27) |
+| MF that prints the **container count `X1` / `X2`** as the first line of the description column (SAWASDEE DENEB 2612S) | `X<n>` removed from MF DESC when n = the B/L's container count | 2026-11-27 (job-07) |
+| ENTER package `FLEXIBAG` / `FLEXITANK` | = TANK (MF `TK (TANK)`) | 2026-11-27 (job-07 p10) |
+| STATUS typed `ลากตุ้` (ุ instead of ู) | repaired to ลากตู้ = CY | 2026-11-27 (job-07 p32) |
+| Scanned ARRIVAL NOTICE: weight row 4–5pt off the SHIPPER'S LOAD row, `24,016.000 KGS :` (column rule read as `:`), `55. eoeo` / `49, øee` (space inside a number), `CBM` unreadable, `& WEIGHT` split off | OCR row tolerance 6pt (OCR only), leading/trailing `:` dropped, number pieces joined, a bare decimal right of the weight = MEAS., `KGS 89.0000 CBM` in one piece → number after KGS | 2026-11-27 (job-07 p24, p16) |
 
 ### Forwarder forms that already have a dedicated reader (automatic, 2026-11-06)
 
@@ -205,6 +215,8 @@ checks every B/L against that forwarder's dedicated reader. 2026-11-06: 138 / 13
   **centre** is nearest the title centre.
 - Any `n KGS` / `n CBM` cell counts as G.W. / MEAS. wherever it is; a marks line ending in `1,234 CARTONS`
   is split into marks + count; the B/L column's own number is removed, its leftover text goes to MARKS.
+- `gap: 60` = stop reading the table at the first vertical gap larger than 60pt (a total row far below, CK LINE).
+- `skip` = regex of cells to ignore (labels such as `Meas.` / `KGS.` printed inside the table).
 - `mode: 'spaced'` for forms printed as one text line separated by long spaces (YOUR SHIPPING).
 - `skip` = regex of table cells to ignore (NIPPON's `PKG :` pieces); `bands` = `{'hdr': <regex of the header
   line>, 'cols': [(right_x, field), …]}` when the column titles do not line up with the values (SINTOP);
@@ -220,7 +232,9 @@ All test jobs live in **one place**: `Downloads/8-Various forms/tests/<job>/inpu
 `job-04` = SAWASDEE VEGA 2614S (STAR CONCORD, NEW HANYUAN, NIPPON, SINTOP, DSV, scanned arrival notices),
 `job-05` = DONGJIN CONFIDENT 0154S (MAXTOP, SINO, ECONIC, 5 scanned pages incl. rotated scans, highlighter, ticks),
 `job-06` = SAWASDEE MIMOSA 2611S (292 pages, 266 MF B/Ls, ~40 scans + 54 blank pages, LEO GLOBAL, FUKUYAMA/INTERCOSPED,
-BUGATTI, many letter forms; 6 MF B/Ls truly absent from that ENTER). OCR results are cached in
+BUGATTI, many letter forms; 6 MF B/Ls truly absent from that ENTER). `job-07` = SAWASDEE DENEB 2612S (33 pages,
+32 B/Ls; CK LINE, EXTRA MARITIME table, RICH FREIGHT, UNICORN B/L CHANGE NO., Sahathai, 6 scans; MF with `X1`
+container-count lines; MF SHEDs 2820 / 2826 / 0332 / 0110). OCR results are cached in
 `%TEMP%\bundle_enter_ocr_cache` (by page image), so re-runs of big bundles take minutes, not tens of minutes. When the user
 brings a bundle with a new form, copy its `input/` there as the next `job-NN` (customer files stay on this
 PC only).
@@ -239,6 +253,10 @@ changes): 13 cells, all intended — DSV `SHIPMENT NO / COST CENTER` removed fro
 as 0°C (job-02), pages read by OCR no longer listed as unreadable; job-03 0. Forwarder test still 138/138.
 Later the same day (job-05 changes): job-02 page 8 scan now read by the BLFORM reader (consignee, MEAS, marks,
 desc now match MF) and `TO THE ORDER OF XYZ BANK` → Notify; job-04 report identical; job-03 0; 138/138.
+2026-11-27 (job-07 changes, base = the pushed GitHub copy): job-03/04 0; job-02 p3 CK LINE CNEE now correct;
+job-01/05/06 only OCR rows improved (G.W. `76,324` / `41,000` / MEAS `25.000` now read, scanned DESCRIPTION rider
+used, stray `:` gone). A first try of the `in_annot` change added `D/O : BKK` to a job-01 DESC → narrowed to
+lines that start left of the FreeText box. Forwarder test: every forwarder 0 different/missing.
 
 ## Comparison rules of this skill
 
