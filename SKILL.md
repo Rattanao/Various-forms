@@ -49,6 +49,7 @@ skill is the single home for all of them.
   a mismatch keeps both values (red / orange). Rows read by OCR keep their values (check by eye); MF B/Ls without
   ENTER are unchanged; notes (red box / extra text / unboxed numbers) stay. `annotate_report` no longer writes the
   full ENTER MARKS/DESC over a `-`. Regression: every changed cell in job-01…07 became `-`, no fill changed.
+- **CNTRS NO. (ENTER) empty (2026-11-27, "ไม่มีต้องแจ้ง (ไม่ระบุใน ENTER)"):** the red cell now reads `⚠ (ไม่ระบุใน ENTER)` (was blank); note `CONTAINER ไม่ตรง (ENTER: ไม่ระบุใน ENTER / MANIFEST: …)`. Regression: 11 cells in job-02 / 04 / 06, nothing else.
 - **STATUS (2026-11-27):** "STATUS (ENTER) / STATUS (MANIFEST) status เดียวกัน เช่น ลากตู้, CY ตรงกับ m/f ที่เป็น CY
   เปลี่ยนเป็น -" → when both sides give a STATUS and they mean the same (CY,CY/CY,FCL,ลากตู้=CY ; LCL,ขน(ส่ง)=LCL ;
   CFS,LCL/CFS,เปิดตู้=LCL/CFS) **both cells show `-`**; the customer's own wording (ด่วน / HOT BOX / เร่งเปิดตู้) moves

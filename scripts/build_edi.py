@@ -2706,7 +2706,8 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
         cont_ok = (set(e_cs) == set(m['cont'])) if len(e_cs) > 1 else bool(e_c and e_c in m['cont'])
         mk(5, cont_ok); mk(6, cont_ok)
         if not cont_ok:
-            notes.append(f"CONTAINER ไม่ตรง (ENTER: {e_c or '-'} / MANIFEST: {';'.join(m['cont']) or '-'})")
+            notes.append(f"CONTAINER ไม่ตรง (ENTER: {e_c or ('ไม่ระบุใน ENTER' if MF_ORDER else '-')} / "
+                         f"MANIFEST: {';'.join(m['cont']) or '-'})")
 
         # STATUS
         se_raw, sm_raw = e['status_raw'] or '', m['status'] or ''
@@ -2947,7 +2948,7 @@ def build_report(MAN, ENT, vessel, man_declared, ent_declared, outpath):
 
         row = [urgent_txt, bl,
                e['cons'], m['cons'] or m['notify'],
-               e_c, ';'.join(m['cont']),
+               e_c or ('(ไม่ระบุใน ENTER)' if MF_ORDER else ''), ';'.join(m['cont']),   # ผู้ใช้ 2026-11-27
                disp_e, disp_m,
                pe if pe is not None else '-', ke or e['pkgtype'] or '-',
                pm if pm is not None else '(ไม่มี)', km or m['pkg_hdr'] or '(ไม่มี)',
