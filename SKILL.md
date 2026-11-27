@@ -59,6 +59,13 @@ so the page is the root `index.html` (+ `.nojekyll`); keep `docs/index.html` ide
 `run-check-edi.bat` (asks SHED, writes `output/EDI-<date-time>.xlsx`), `requirements.txt`, `.gitignore`
 (input/, output/, tests/, *.xls, *.xlsx, *.pdf never go up).
 
+**Web vs PC test 2026-11-27 (SWDN, job-07):** every text page identical to the PC report; only the 5 scanned
+(orange) B/Ls differ (Tesseract vs Windows OCR) plus the totals that follow from them. Found on the way: Pyodide's
+PyMuPDF 1.26.3 keeps double spaces inside a line (`Gross Weigh  Volume`) where the PC's 1.28.2 has one, so
+`apply_profile` now matches header titles with spaces collapsed — any new matching on raw line text must do the same.
+Test recipe: copy the clone's `index.html`, `app/`, `scripts/` + `testdata/{MANIFEST.xls,ENTER.pdf,pc.xlsx}` into a
+scratch `site/`, serve it on localhost, `CheckVarious.run(mf, en)`, then compare `/work/output/EDI.xlsx` with pc.xlsx.
+
 **Online checker (the link to send to friends): https://rattanao.github.io/Various-forms/** (2026-11-27).
 `index.html` + `app/app.js` run the *same* `scripts/bundle_edi.py` + `build_edi.py` in the browser with Pyodide
 0.28.3 (`loadPackage(['pymupdf','xlrd','micropip'])` + `micropip.install('openpyxl')`); nothing is uploaded.

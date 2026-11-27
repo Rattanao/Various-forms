@@ -1031,10 +1031,12 @@ def apply_profile(rec, lines, annots):
             rec['profile'] = pf['name']
         _apply_rx(pf, rec, body)
         return rec
-    labels = {k.upper(): v for k, v in pf['hdr'].items()}
+    # ช่องว่างซ้อนไม่นับ: PyMuPDF บนเว็บ (1.26) อ่าน 'Gross Weigh  Volume' มี 2 ช่องว่าง ส่วนในเครื่อง (1.28) มี 1 (2026-11-27)
+    _sp = lambda s: re.sub(r'\s+', ' ', s).strip().upper()
+    labels = {_sp(k): v for k, v in pf['hdr'].items()}
     hdr, hl = {}, []
     for l in sorted(body, key=lambda l: l['y']):
-        k = labels.get(l['t'].strip().upper())
+        k = labels.get(_sp(l['t']))
         if k and (not hl or l['y'] - hl[0]['y'] < 30):      # หัวตาราง 1–2 ชั้นแรกเท่านั้น
             hl.append(l)
             hdr.setdefault(k, l)
