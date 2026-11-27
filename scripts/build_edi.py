@@ -2558,7 +2558,7 @@ HEAD = ['สรุปผลเร่งด่วน', 'B/L NO.',
         'MEAS. MTQ (ENTER)', 'MEAS. MTQ (MANIFEST)',
         'MARKS (ENTER)', 'MARKS (MANIFEST)',
         'DESC. (ENTER)', 'DESC. (MANIFEST)',
-        'REEFER TEMP', 'SHED (MANIFEST)', 'DG', 'TRANSIT/TRANSHIPMENT',
+        'REEFER TEMP', 'SHED (DG_M/F)', 'DG', 'TRANSIT/TRANSHIPMENT',
         'ประเทศปลายทาง', 'CARGO MOVEMENT',
         'หมายเหตุ / จุดที่ไม่ตรงกัน']
 NC = len(HEAD)

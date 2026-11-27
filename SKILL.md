@@ -44,6 +44,7 @@ skill is the single home for all of them.
     SHED cells changed in job-01…07.
   - **Update 2: "ถ้ามันถูกต้องและตรงให้ใส่ - ถ้ามันไม่ตรงก็แจ้งเตือน"** — DG SHED 2826 correct → `-`; DG that matches
     (CLASS/UN complete) → `-`; wrong/missing → red with the values. REEFER that matches (TEMP same + MF has VENT) also shows `-` ("REEFER ที่ตรงกันให้ใส่ - ด้วย").
+  - **Update 3: header renamed to `SHED (DG_M/F)`** ("SHED (MANIFEST) เปลี่ยนเป็น SHED (DG_M/F)").
   - (Before the update) the column was **SHED (MANIFEST)** and always showed the MF value. When MF port of discharge is LAEM CHABANG
     and MF has DG (CLASS or UN), SHED ≠ 2826 → red `… (ต้องเป็น 2826 — DG LAEM CHABANG)`; every other B/L is not
     checked (white). TOTAL cell `SHED DG ไม่ตรง n B/L`.
